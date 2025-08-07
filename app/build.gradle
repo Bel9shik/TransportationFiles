@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow'
+    id 'org.openjfx.javafxplugin' version '0.1.0' // Добавляем плагин для JavaFX
+}
+
+javafx {
+    version = "21.0.7"
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.base']
+}
+
+dependencies {
+    implementation project(':proto')
+    implementation 'io.grpc:grpc-netty-shaded:1.73.0'
+    implementation 'io.grpc:grpc-protobuf:1.73.0'
+    implementation 'io.grpc:grpc-stub:1.73.0'
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+    // https://mvnrepository.com/artifact/org.projectlombok/lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}
+
+application {
+    mainClass = 'org.example.StartApp'
+    applicationDefaultJvmArgs = [
+            "--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED",
+            "--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED"
+    ]
+}
+
+shadowJar {
+    archiveBaseName = 'app'
+    archiveClassifier = 'all'
+    mergeServiceFiles()
+    manifest {
+        attributes 'Main-Class': 'org.example.StartApp'
+    }
+
+//    from {
+//        configurations.runtimeClasspath.collect {
+//            it.isDirectory() ? it : zipTree(it)
+//        }
+//    }
+
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+}
+
+build.dependsOn shadowJar

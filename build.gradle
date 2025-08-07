@@ -1,0 +1,18 @@
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+
+    group = 'org.example'
+    version = '1.0-SNAPSHOT'
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal() // Добавляем Gradle Plugin Portal
+    }
+    dependencies {
+        classpath 'com.github.johnrengelman.shadow:com.github.johnrengelman.shadow.gradle.plugin:8.1.1'
+    }
+}

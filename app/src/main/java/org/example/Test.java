@@ -1,0 +1,27 @@
+package org.example;
+
+import io.grpc.internal.JsonUtil;
+import org.example.constants.Constants;
+import org.example.cotrollers.PairingController;
+import org.example.grpc.FilePublisher;
+import org.example.transport.TransportFiles;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+public class Test {
+    public static void main(String[] args) throws UnknownHostException {
+//        try {
+//            new FilePublisher().sendFile("192.168.3.26", Constants.GRPC_PORT, "/home/bel9sh/IdeaProjects/TransportationFiles/app/src/main/resources/[Anistar.org] Kaede to Suzu The Animation [TV-1] - 02 [720p].mp4");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+
+        if (new PairingController().pairingRequest("bel9sh", InetAddress.getByName("192.168.3.26"))) {
+            System.out.println("Устройства сопряжены");
+        } else  {
+            System.out.println("Устройства НЕ сопряжены!");
+        }
+
+    }
+}

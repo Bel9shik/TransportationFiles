@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package org.example.transport;
+
+service FileTransferService {
+  rpc sendFile(stream FileChunk) returns (TransferStatus);
+}
+
+service PairingService {
+  rpc pairingRequest(PairingRequest) returns (PairingResponse);
+}
+
+message FileChunk {
+  bytes content = 1;
+  string filename = 2;
+}
+
+message TransferStatus {
+  bool success = 1;
+  string message = 2;
+}
+
+message PairingRequest {
+  string PCName = 1;
+  string PCAddress = 2;
+}
+
+message PairingResponse {
+  bool response = 1;
+}

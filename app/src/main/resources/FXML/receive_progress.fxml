@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1"
+            style="-fx-background-color: linear-gradient(to bottom, #27ae60, #219653);">
+
+    <VBox alignment="CENTER" spacing="30" AnchorPane.topAnchor="100" AnchorPane.bottomAnchor="100"
+          AnchorPane.leftAnchor="100" AnchorPane.rightAnchor="100">
+
+        <!-- Заголовок -->
+        <Text fill="WHITE" text="Приём файла" style="-fx-font-weight: bold;">
+            <Font name="Arial" size="32"/>
+        </Text>
+
+        <!-- Иконка загрузки -->
+        <ImageView fitWidth="80" fitHeight="80">
+            <Image url="@../icons/download_white.png"/>
+        </ImageView>
+
+        <!-- Анимация загрузки -->
+        <VBox alignment="CENTER" spacing="10">
+            <Label text="Ожидание файла..." style="-fx-text-fill: white; -fx-font-size: 16;"/>
+            <ProgressBar style="-fx-accent: #2ecc71; -fx-pref-width: 300; -fx-pref-height: 10;" progress="-1"/>
+        </VBox>
+
+        <!-- Прогресс при получении -->
+        <ProgressBar fx:id="receiveProgressBar" style="-fx-accent: #f1c40f; -fx-pref-width: 400; -fx-pref-height: 20;" visible="false"/>
+        <Label fx:id="receiveProgressLabel" text="" style="-fx-text-fill: white; -fx-font-size: 18; -fx-font-weight: bold;" visible="false"/>
+
+        <!-- Информация -->
+        <Label fx:id="senderLabel" text="Отправитель: User123" style="-fx-text-fill: #ecf0f1; -fx-font-size: 14;"/>
+        <Label fx:id="fileInfoLabel" text="Размер: ..." style="-fx-text-fill: #ecf0f1; -fx-font-size: 14;" visible="false"/>
+
+        <!-- Кнопки -->
+        <Button fx:id="acceptBtn" text="Принять файл" style="-fx-background-radius: 15; -fx-background-color: rgba(0,0,0,0.3);
+                -fx-text-fill: white; -fx-font-size: 14; -fx-padding: 10 30; -fx-cursor: hand; -fx-border-color: white;
+                -fx-border-radius: 15; -fx-border-width: 2;"/>
+    </VBox>
+
+</AnchorPane>
