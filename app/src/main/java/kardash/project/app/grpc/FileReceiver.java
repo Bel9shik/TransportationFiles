@@ -1,8 +1,8 @@
-package org.example.grpc;
+package kardash.project.app.grpc;
 
 import io.grpc.stub.StreamObserver;
-import org.example.transport.FileTransferServiceGrpc;
-import org.example.transport.TransportFiles;
+import kardash.project.proto.transport.FileTransferServiceGrpc;
+import kardash.project.proto.transport.TransportFiles;
 import java.io.FileOutputStream;
 import java.io.IOException;
 

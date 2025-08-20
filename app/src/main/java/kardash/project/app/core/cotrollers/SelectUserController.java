@@ -1,4 +1,4 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.cotrollers;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -12,7 +12,9 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.WindowEvent;
-import kardash.project.app.cotrollers.view.ViewController;
+import kardash.project.app.core.cotrollers.view.ViewController;
+import kardash.project.app.core.services.PairingService;
+import kardash.project.app.core.services.UserDiscoveryService;
 import kardash.project.app.models.TransferContext;
 import kardash.project.app.models.User;
 
@@ -101,7 +103,7 @@ public class SelectUserController {
                     setGraphic(null);
                 } else {
                     nameLabel.setText(user.hostName());
-                    ipLabel.setText(user.ip() + ":" + user.port()); 
+                    ipLabel.setText(user.ip() + ":" + user.port());
                     setGraphic(root);
                 }
             }
@@ -118,12 +120,34 @@ public class SelectUserController {
             try {
                 TransferContext.setUser(selected);
                 ViewController.switchScene("outcoming_request.fxml");
-                if (new PairingController().pairingRequest(selected.hostName(), InetAddress.getByName(selected.hostName()))) {
-                    System.out.println("Устройства сопряжены");
-                } else  {
-                    System.out.println("Устройства НЕ сопряжены!");
-                }
-                ViewController.switchScene("send_progress.fxml");
+
+                PairingService pairingService = new PairingService(selected.hostName(), InetAddress.getByName(selected.ip()));
+                pairingService.setOnSucceeded(e -> {
+                    boolean ok = pairingService.getValue();
+                    try {
+                        if (ok) ViewController.switchScene("send_progress.fxml");
+                        else {
+                            showError("Пользователь отклонил запрос");
+                            TransferContext.clearUser();
+                            ViewController.switchScene("select_user.fxml");
+                        }
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+
+                });
+
+                pairingService.setOnFailed(e -> {
+                    showError("Ошибка соединения: " + pairingService.getException().getMessage());
+                    try {
+                        TransferContext.clearUser();
+                        ViewController.switchScene("select_user.fxml");
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                });
+                pairingService.start();
+
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -1,10 +1,10 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.services;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import kardash.project.app.constants.Constants;
+import kardash.project.app.models.constants.Constants;
 import kardash.project.app.models.User;
 import lombok.Getter;
 
@@ -79,9 +79,9 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
                 String[] parts = message.split(":");
 
                 if (parts.length == 3) {
-                    String ip = parts[1];
+                    String ip = parts[1].trim();
                     int port = Integer.parseInt(parts[2]);
-                    String hostName = address.getHostName();
+                    String hostName = address.getHostName().trim();
 
                     User user = new User(ip, port, hostName);
 
@@ -136,7 +136,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
     }
 
     @Override
-    protected void succeeded() {
+    public void succeeded() {
         cleanup();
         super.succeeded();
     }

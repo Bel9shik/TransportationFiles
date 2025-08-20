@@ -1,10 +1,10 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.cotrollers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.stage.FileChooser;
-import kardash.project.app.cotrollers.view.ViewController;
+import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.models.TransferContext;
 
 import java.io.File;
@@ -27,7 +27,7 @@ public class SelectFileController {
     @FXML
     public void handleBackToMainMenu() {
 
-        TransferContext.clear();
+        TransferContext.clearFile();
 
         try {
             ViewController.switchScene("main.fxml");

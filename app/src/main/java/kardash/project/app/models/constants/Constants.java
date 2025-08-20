@@ -1,4 +1,4 @@
-package kardash.project.app.constants;
+package kardash.project.app.models.constants;
 
 public final class Constants {
     public static final int GRPC_PORT = 50051;

@@ -1,11 +1,11 @@
-package org.example.grpc;
+package kardash.project.app.grpc;
 
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import org.example.transport.FileTransferServiceGrpc;
-import org.example.transport.TransportFiles;
+import kardash.project.proto.transport.FileTransferServiceGrpc;
+import kardash.project.proto.transport.TransportFiles;
 
 import java.io.IOException;
 import java.nio.file.Files;

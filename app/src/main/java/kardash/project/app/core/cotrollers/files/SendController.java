@@ -1,4 +1,4 @@
-package kardash.project.app.cotrollers.files;
+package kardash.project.app.core.cotrollers.files;
 
 import kardash.project.app.grpc.FilePublisher;
 

@@ -1,8 +1,8 @@
-package org.example.grpc;
+package kardash.project.app.grpc;
 
 import io.grpc.stub.StreamObserver;
-import org.example.transport.PairingServiceGrpc;
-import org.example.transport.TransportFiles;
+import kardash.project.proto.transport.PairingServiceGrpc;
+import kardash.project.proto.transport.TransportFiles;
 
 import java.io.BufferedReader;
 import java.io.IOException;

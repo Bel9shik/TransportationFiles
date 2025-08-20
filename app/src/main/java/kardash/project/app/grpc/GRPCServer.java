@@ -1,4 +1,4 @@
-package org.example.grpc;
+package kardash.project.app.grpc;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -42,5 +42,6 @@ public class GRPCServer implements Runnable {
         if (server != null) {
             server.shutdownNow(); // инициирует остановку
         }
+        System.out.println("gRPC server stopped");
     }
 }

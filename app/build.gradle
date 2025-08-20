@@ -1,28 +1,46 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow'
-    id 'org.openjfx.javafxplugin' version '0.1.0' // Добавляем плагин для JavaFX
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 javafx {
-    version = "21.0.7"
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.base']
+    version = "21"
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+def getPlatform() {
+    def os = org.gradle.internal.os.OperatingSystem.current()
+    if (os.isWindows()) return "win"
+    if (os.isMacOsX()) return "mac"
+    return "linux"
 }
 
 dependencies {
     implementation project(':proto')
+
+    // Явно подключаем JavaFX
+    implementation "org.openjfx:javafx-controls:21.0.7"
+    implementation "org.openjfx:javafx-fxml:21.0.7"
+
     implementation 'io.grpc:grpc-netty-shaded:1.73.0'
     implementation 'io.grpc:grpc-protobuf:1.73.0'
     implementation 'io.grpc:grpc-stub:1.73.0'
+
+    implementation 'io.projectreactor.tools:blockhound:1.0.8.RELEASE'
     implementation 'javax.annotation:javax.annotation-api:1.3.2'
-    // https://mvnrepository.com/artifact/org.projectlombok/lombok
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
 }
 
 application {
-    mainClass = 'org.example.StartApp'
+    mainClass = 'kardash.project.app.StartApp'
     applicationDefaultJvmArgs = [
             "--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED",
             "--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED"
@@ -30,20 +48,11 @@ application {
 }
 
 shadowJar {
-    archiveBaseName = 'app'
-    archiveClassifier = 'all'
+    archiveFileName = "TransportationFiles-all.jar"
+    configurations = [project.configurations.runtimeClasspath]
     mergeServiceFiles()
-    manifest {
-        attributes 'Main-Class': 'org.example.StartApp'
-    }
-
-//    from {
-//        configurations.runtimeClasspath.collect {
-//            it.isDirectory() ? it : zipTree(it)
-//        }
-//    }
-
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
 }
 
-build.dependsOn shadowJar
+compileJava {
+    options.release = 21
+}

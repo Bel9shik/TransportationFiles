@@ -1,9 +1,9 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.cotrollers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import kardash.project.app.cotrollers.view.ViewController;
+import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.models.TransferContext;
 import kardash.project.app.models.User;
 
@@ -20,7 +20,7 @@ public class OutComingRequestController {
     @FXML
     public void initialize() {
         user = TransferContext.getUser();
-        TransferContext.clear();
+        TransferContext.clearUser();
 
         userNameLabel.setText(user.hostName());
     }

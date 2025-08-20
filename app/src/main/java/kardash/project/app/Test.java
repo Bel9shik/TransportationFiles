@@ -1,10 +1,6 @@
-package org.example;
+package kardash.project.app;
 
-import io.grpc.internal.JsonUtil;
-import org.example.constants.Constants;
-import org.example.cotrollers.PairingController;
-import org.example.grpc.FilePublisher;
-import org.example.transport.TransportFiles;
+import kardash.project.app.core.cotrollers.PairingController;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

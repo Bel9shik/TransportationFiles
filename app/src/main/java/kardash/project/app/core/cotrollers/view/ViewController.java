@@ -1,4 +1,4 @@
-package kardash.project.app.cotrollers.view;
+package kardash.project.app.core.cotrollers.view;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;

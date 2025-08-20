@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package org.example.transport;
+package kardash.project.proto.transport;
 
 service FileTransferService {
   rpc sendFile(stream FileChunk) returns (TransferStatus);

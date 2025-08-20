@@ -1,9 +1,10 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.cotrollers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import kardash.project.app.cotrollers.view.ViewController;
+import kardash.project.app.core.cotrollers.view.ViewController;
+import kardash.project.app.core.services.UserDiscoveryService;
 
 import java.io.IOException;
 

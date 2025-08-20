@@ -1,8 +1,8 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.cotrollers;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import kardash.project.app.constants.Constants;
+import kardash.project.app.models.constants.Constants;
 import kardash.project.proto.transport.PairingServiceGrpc;
 import kardash.project.proto.transport.TransportFiles;
 

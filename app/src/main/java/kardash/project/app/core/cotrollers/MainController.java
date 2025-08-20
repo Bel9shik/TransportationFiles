@@ -1,11 +1,11 @@
-package kardash.project.app.cotrollers;
+package kardash.project.app.core.cotrollers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import kardash.project.app.constants.Constants;
-import kardash.project.app.cotrollers.files.ReceiveController;
-import kardash.project.app.cotrollers.files.SendController;
-import kardash.project.app.cotrollers.view.ViewController;
+import kardash.project.app.models.constants.Constants;
+import kardash.project.app.core.cotrollers.files.ReceiveController;
+import kardash.project.app.core.cotrollers.files.SendController;
+import kardash.project.app.core.cotrollers.view.ViewController;
 
 import java.io.IOException;
 
