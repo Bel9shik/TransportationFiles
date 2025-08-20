@@ -1,10 +1,10 @@
-package org.example.cotrollers;
+package kardash.project.app.cotrollers;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import org.example.constants.Constants;
-import org.example.transport.PairingServiceGrpc;
-import org.example.transport.TransportFiles;
+import kardash.project.app.constants.Constants;
+import kardash.project.proto.transport.PairingServiceGrpc;
+import kardash.project.proto.transport.TransportFiles;
 
 import java.net.InetAddress;
 

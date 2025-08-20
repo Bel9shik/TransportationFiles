@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.animation.RotateTransition?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1"
+            style="-fx-background-color: linear-gradient(to bottom, #2c3e50, #3498db);">
+
+    <VBox alignment="CENTER" spacing="30" AnchorPane.topAnchor="100" AnchorPane.bottomAnchor="100"
+          AnchorPane.leftAnchor="100" AnchorPane.rightAnchor="100">
+
+        <!-- Заголовок -->
+        <Text fill="WHITE" text="Ожидание запросов" style="-fx-font-weight: bold;">
+            <Font name="Arial" size="32"/>
+        </Text>
+
+        <!-- Анимированный индикатор поиска -->
+        <VBox alignment="CENTER" spacing="20">
+            <ImageView fitWidth="120" fitHeight="120">
+                <Image url="@../icons/search.png"/>
+                <RotateTransition fx:id="rotateTransition" node="$this" duration="2s"
+                                  byAngle="360" cycleCount="INDEFINITE" autoReverse="false"/>
+            </ImageView>
+
+            <Circle radius="10" fill="#f1c40f">
+                <RotateTransition fx:id="dotTransition" node="$this" duration="1.5s"
+                                  byAngle="360" cycleCount="INDEFINITE" autoReverse="false"/>
+            </Circle>
+        </VBox>
+
+        <!-- Информационный текст -->
+        <VBox alignment="CENTER" spacing="10">
+            <Label text="Сканирование сети..." style="-fx-text-fill: white; -fx-font-size: 18;"/>
+            <Label text="Ожидание входящих запросов на передачу файлов"
+                   style="-fx-text-fill: #ecf0f1; -fx-font-size: 14;"/>
+            <Label fx:id="statusLabel" text="Статус: Активно"
+                   style="-fx-text-fill: #2ecc71; -fx-font-size: 14; -fx-font-weight: bold;"/>
+        </VBox>
+
+        <!-- Индикаторы активности -->
+        <HBox alignment="CENTER" spacing="10">
+            <Circle radius="8" fill="#2ecc71" opacity="0.5">
+                <RotateTransition duration="1s" byAngle="360" cycleCount="INDEFINITE" autoReverse="false"/>
+            </Circle>
+            <Circle radius="8" fill="#3498db" opacity="0.7">
+                <RotateTransition duration="1.2s" byAngle="360" cycleCount="INDEFINITE" autoReverse="false"/>
+            </Circle>
+            <Circle radius="8" fill="#9b59b6" opacity="0.9">
+                <RotateTransition duration="1.4s" byAngle="360" cycleCount="INDEFINITE" autoReverse="false"/>
+            </Circle>
+        </HBox>
+
+        <!-- Сетевая информация -->
+        <VBox alignment="CENTER" spacing="5" style="-fx-background-color: rgba(0,0,0,0.2);
+              -fx-background-radius: 10; -fx-padding: 15;">
+            <Label fx:id="ipLabel" text="Ваш IP: 192.168.1.100"
+                   style="-fx-text-fill: #f1c40f; -fx-font-size: 14;"/>
+            <Label fx:id="portLabel" text="Порт: 8080"
+                   style="-fx-text-fill: #f1c40f; -fx-font-size: 14;"/>
+        </VBox>
+
+        <!-- Кнопка возврата -->
+        <Button fx:id="backButton" text="Назад" style="-fx-background-radius: 15;
+                -fx-background-color: rgba(255,255,255,0.1); -fx-text-fill: white; -fx-font-size: 14;
+                -fx-padding: 10 30; -fx-cursor: hand; -fx-border-color: #ecf0f1; -fx-border-radius: 15;
+                -fx-border-width: 1.5;">
+<!--            <graphic>-->
+<!--                <ImageView fitWidth="20" fitHeight="20">-->
+<!--                    <Image url="@icons/back_arrow.png"/>-->
+<!--                </ImageView>-->
+<!--            </graphic>-->
+        </Button>
+
+    </VBox>
+
+</AnchorPane>
