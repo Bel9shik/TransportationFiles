@@ -2,7 +2,7 @@ package kardash.project.app.models;
 
 import java.util.Objects;
 
-public record User (String ip, int port, String hostName) {
+public record User (String ip, int port, String hostName, long lastSeen) {
 
     @Override
     public boolean equals(Object o) {

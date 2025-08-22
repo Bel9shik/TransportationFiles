@@ -1,5 +1,6 @@
 package kardash.project.app.core.services;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
@@ -10,6 +11,7 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.net.*;
+import java.sql.Time;
 import java.util.Enumeration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,6 +27,8 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
+    private final ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor();
+
     public UserDiscoveryService() {
         this.users = FXCollections.observableArrayList();
     }
@@ -37,7 +41,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
             protected ObservableList<User> call() {
                 running = true;
                 initializeNetwork();
-
+                startCleaner();
                 scheduler = Executors.newSingleThreadScheduledExecutor();
                 scheduler.scheduleAtFixedRate(
                         this::sendDiscoveryPacket,
@@ -60,11 +64,10 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
                 try {
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     socket.receive(packet);
-                    InetAddress address = packet.getAddress();
                     // Игнорируем свои же сообщения и loopback
                     String message = new String(packet.getData(), 0, packet.getLength());
-//                    if (!address.getHostAddress().equals(getLocalNetworkIP()) && message.startsWith("DISCOVERY: ")) processDiscoveryPackets(message, address);
-                    processDiscoveryPackets(message, address);
+//                    if (!address.getHostAddress().equals(getLocalNetworkIP()) && message.startsWith("DISCOVERY:")) processDiscoveryPackets(message, address);
+                    processDiscoveryPackets(message);
                 } catch (SocketTimeoutException | SocketException e) {
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -72,18 +75,18 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
             }
 
-            private void processDiscoveryPackets(String message, InetAddress address) {
+            private void processDiscoveryPackets(String message) {
 
                 System.out.println(message);
 
                 String[] parts = message.split(":");
 
-                if (parts.length == 3) {
+                if (parts.length == 4) {
                     String ip = parts[1].trim();
                     int port = Integer.parseInt(parts[2]);
-                    String hostName = address.getHostName().trim();
+                    String hostName = parts[3].trim();
 
-                    User user = new User(ip, port, hostName);
+                    User user = new User(ip, port, hostName, System.currentTimeMillis());
 
                     users.removeIf(u -> u.equals(user));
                     users.add(user);
@@ -97,7 +100,8 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
                 try {
                     String localIP = getLocalNetworkIP();
-                    String message = "DISCOVERY: " + localIP + ":" + Constants.GRPC_PORT;
+                    String pcName    = InetAddress.getLocalHost().getHostName();
+                    String message   = "DISCOVERY:" + localIP + ":" + Constants.GRPC_PORT + ":" + pcName;
                     byte[] buf = message.getBytes();
                     DatagramPacket packet = new DatagramPacket(buf, buf.length, groupAddress, Constants.MULTICAST_PORT);
                     socket.send(packet);
@@ -106,6 +110,16 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
                 }
             }
         };
+    }
+
+    private void startCleaner() {
+
+
+        cleaner.scheduleWithFixedDelay(() -> Platform.runLater(() -> {
+            long now = System.currentTimeMillis();
+            users.removeIf(u -> now - u.lastSeen() >= 5000);
+        }), 5, 5, TimeUnit.MILLISECONDS);
+
     }
 
     private void initializeNetwork() {
@@ -146,6 +160,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
         running = false;
 
         if (scheduler != null) scheduler.shutdownNow();
+        cleaner.shutdownNow();
 
         if (socket != null && !socket.isClosed()) {
             try {
