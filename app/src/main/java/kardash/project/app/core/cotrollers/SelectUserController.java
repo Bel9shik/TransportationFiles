@@ -14,9 +14,11 @@ import javafx.stage.WindowEvent;
 import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.core.services.PairingService;
 import kardash.project.app.core.services.UserDiscoveryService;
+import kardash.project.app.models.SendingFile;
 import kardash.project.app.models.TransferContext;
 import kardash.project.app.models.User;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Comparator;
@@ -48,7 +50,7 @@ public class SelectUserController {
         userListView.setCellFactory(this::createUserCell);
         discoveryService.setOnFailed(e -> {
             loadingIndicator.setVisible(false);
-            showError("Ошибка обнаружения пользователей");
+            ViewController.showError("Ошибка обнаружения пользователей");
         });
 
         discoveryService.setOnCancelled(e -> {
@@ -117,15 +119,19 @@ public class SelectUserController {
             }
             try {
                 TransferContext.setUser(selected);
+                SendingFile file = TransferContext.getFile();
                 ViewController.switchScene("outcoming_request.fxml");
 
-                PairingService pairingService = new PairingService(selected.hostName(), InetAddress.getByName(selected.ip()));
+                PairingService pairingService = new PairingService(selected.hostName(),
+                        selected.ip(),
+                        file.file().getName(),
+                        file.stringSize());
                 pairingService.setOnSucceeded(e -> {
                     boolean ok = pairingService.getValue();
                     try {
                         if (ok) ViewController.switchScene("send_progress.fxml");
                         else {
-                            showError("Пользователь отклонил запрос");
+                            ViewController.showError("Пользователь отклонил запрос");
                             TransferContext.clearUser();
                             ViewController.switchScene("select_user.fxml");
                         }
@@ -136,7 +142,7 @@ public class SelectUserController {
                 });
 
                 pairingService.setOnFailed(e -> {
-                    showError("Ошибка соединения: " + pairingService.getException().getMessage());
+                    ViewController.showError("Ошибка соединения: " + pairingService.getException().getMessage());
                     try {
                         TransferContext.clearUser();
                         ViewController.switchScene("select_user.fxml");
@@ -165,14 +171,6 @@ public class SelectUserController {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Ошибка");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
 }

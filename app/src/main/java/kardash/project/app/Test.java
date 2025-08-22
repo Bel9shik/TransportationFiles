@@ -13,7 +13,7 @@ public class Test {
 //            e.printStackTrace();
 //        }
 
-        if (new PairingController().pairingRequest("bel9sh", InetAddress.getByName("192.168.3.26"))) {
+        if (new PairingController().pairingRequest("bel9sh", "192.168.3.26", "fileName", "stringSize")) {
             System.out.println("Устройства сопряжены");
         } else  {
             System.out.println("Устройства НЕ сопряжены!");

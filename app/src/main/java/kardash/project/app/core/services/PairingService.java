@@ -4,16 +4,18 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import kardash.project.app.core.cotrollers.PairingController;
 
-import java.net.InetAddress;
-
 public class PairingService extends Service<Boolean> {
 
     private final String pcName;
-    private final InetAddress ip;
+    private final String ip;
+    private final String fileName;
+    private final String stringSize;
 
-    public PairingService(String pcName, InetAddress ip) {
+    public PairingService(String pcName, String ip, String name, String size) {
         this.pcName = pcName;
         this.ip = ip;
+        this.fileName = name;
+        this.stringSize = size;
     }
 
     @Override
@@ -21,7 +23,7 @@ public class PairingService extends Service<Boolean> {
         return new Task<Boolean>() {
             @Override
             protected Boolean call() {
-                return new PairingController().pairingRequest(pcName, ip);
+                return new PairingController().pairingRequest(pcName, ip, fileName, stringSize);
             }
         };
     }

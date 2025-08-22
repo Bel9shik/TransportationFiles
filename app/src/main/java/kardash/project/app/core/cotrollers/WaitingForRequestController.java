@@ -18,23 +18,13 @@ public class WaitingForRequestController {
     @FXML
     public void initialize() {
         discoveryService = new UserDiscoveryService();
-//        discoveryService.setOnSucceeded(e -> users.setAll(discoveryService.getValue()));
         discoveryService.setOnSucceeded(e -> {
-//            userListView.setItems(discoveryService.getValue());
-            showError("Уведомление типа согласие на сопряжение");
+            ViewController.showError("Уведомление типа согласие на сопряжение");
         });
 
         ViewController.getPrimaryStage().setOnCloseRequest(e -> discoveryService.cancel());
 
         discoveryService.start();
-    }
-
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Ошибка");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 
     @FXML

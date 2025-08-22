@@ -13,7 +13,11 @@ public final class TransferContext {
 
     @Getter
     @Setter
-    private static File file;
+    private static SendingFile file;
+
+    @Getter
+    @Setter
+    private static IncomingRequestContext incomingRequestContext;
 
     public static void clearUser() {
         user = null;
@@ -21,6 +25,10 @@ public final class TransferContext {
 
     public static void clearFile() {
         file = null;
+    }
+
+    public static void clearIncomingRequestContext() {
+        incomingRequestContext = null;
     }
 
 }

@@ -6,19 +6,19 @@ import kardash.project.app.models.constants.Constants;
 import kardash.project.proto.transport.PairingServiceGrpc;
 import kardash.project.proto.transport.TransportFiles;
 
-import java.net.InetAddress;
-
 public class PairingController {
 
-    public boolean pairingRequest(String PCName, InetAddress ipAddress) {
+    public boolean pairingRequest(String PCName, String hostName, String fileName, String stringSize) {
 
         TransportFiles.PairingRequest request = TransportFiles.PairingRequest.newBuilder()
-                .setPCAddress(ipAddress.getCanonicalHostName())
+                .setPCAddress(hostName)
                 .setPCName(PCName)
+                .setFileSize(stringSize)
+                .setFileName(fileName)
                 .build();
 
         ManagedChannel channel = ManagedChannelBuilder
-                .forAddress(ipAddress.getHostName(), Constants.GRPC_PORT)
+                .forAddress(hostName, Constants.GRPC_PORT)
                 .usePlaintext()
                 .build();
 

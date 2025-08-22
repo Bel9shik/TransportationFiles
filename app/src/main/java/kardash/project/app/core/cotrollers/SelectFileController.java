@@ -5,6 +5,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.stage.FileChooser;
 import kardash.project.app.core.cotrollers.view.ViewController;
+import kardash.project.app.models.SendingFile;
 import kardash.project.app.models.TransferContext;
 
 import java.io.File;
@@ -56,14 +57,15 @@ public class SelectFileController {
         File file = fileChooser.showOpenDialog(browseBtn.getScene().getWindow());
 
         if (file != null) {
-            TransferContext.setFile(file);
+            String stringSize = formatFileSize(file.length());
+            TransferContext.setFile(new SendingFile(file, stringSize));
             fileNameLabel.setText(file.getName());
-            fileSizeLabel.setText("Размер: " + formatFileSize(file.length()));
+            fileSizeLabel.setText("Размер: " + stringSize);
             sendBtn.setDisable(false);
         }
     }
 
-    private String formatFileSize(long bytes) {
+    public static String formatFileSize(long bytes) {
         if (bytes <= 0) return "0 Б";
 
         final String[] units = {"Б", "КБ", "МБ", "ГБ"};

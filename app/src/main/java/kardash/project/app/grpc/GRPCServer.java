@@ -21,6 +21,7 @@ public class GRPCServer implements Runnable {
                     .forPort(port)
                     .addService(new FileReceiver())
                     .addService(new PairingImpl())
+                    .addService(new CancelImpl())
                     .build()
                     .start();
             System.out.println("gRPC server started on port " + port);

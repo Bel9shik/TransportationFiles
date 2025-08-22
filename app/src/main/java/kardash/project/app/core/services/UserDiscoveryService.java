@@ -117,7 +117,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
         cleaner.scheduleWithFixedDelay(() -> Platform.runLater(() -> {
             long now = System.currentTimeMillis();
-            users.removeIf(u -> now - u.lastSeen() >= 5000);
+            users.removeIf(u -> now - u.lastSeen() >= Constants.CLEAN_INTERVAL_MS);
         }), 5, 5, TimeUnit.SECONDS);
 
     }

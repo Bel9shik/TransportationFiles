@@ -6,7 +6,8 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane style="-fx-background-color: linear-gradient(to bottom, #8e44ad, #9b59b6);" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane fx:controller="kardash.project.app.core.cotrollers.IncomingRequestController"
+        style="-fx-background-color: linear-gradient(to bottom, #8e44ad, #9b59b6);" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
 
     <VBox alignment="CENTER" spacing="30" AnchorPane.bottomAnchor="50" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50" AnchorPane.topAnchor="50">
 
@@ -16,8 +17,8 @@
         </Text>
 
         <!-- Иконка уведомления -->
-        <ImageView fitHeight="100" fitWidth="100">
-            <Image url="@../icons/notification.png" />
+        <ImageView fitHeight="160" fitWidth="180">
+            <Image url="@../icons/alert.gif" />
         </ImageView>
 
         <!-- Информация о запросе -->
@@ -46,7 +47,7 @@
 
         <!-- Кнопки действий -->
         <HBox alignment="CENTER" spacing="40">
-            <Button fx:id="rejectBtn" style="-fx-background-radius: 20;                     -fx-font-size: 16; -fx-background-color: #e74c3c; -fx-text-fill: white;                     -fx-cursor: hand; -fx-padding: 10 30;" text="Отклонить">
+            <Button fx:id="rejectBtn" onAction="#reject" style="-fx-background-radius: 20;                     -fx-font-size: 16; -fx-background-color: #e74c3c; -fx-text-fill: white;                     -fx-cursor: hand; -fx-padding: 10 30;" text="Отклонить">
                 <graphic>
                     <ImageView fitHeight="30" fitWidth="30">
                         <Image url="@../icons/cancel.png" />
@@ -70,7 +71,7 @@
             </textFill>
             </Button>
 
-            <Button fx:id="acceptBtn" style="-fx-background-radius: 20;                     -fx-font-size: 16; -fx-background-color: #2ecc71; -fx-text-fill: white;                     -fx-cursor: hand; -fx-padding: 10 30;" text="Принять">
+            <Button fx:id="acceptBtn" onAction="#accept" style="-fx-background-radius: 20;                     -fx-font-size: 16; -fx-background-color: #2ecc71; -fx-text-fill: white;                     -fx-cursor: hand; -fx-padding: 10 30;" text="Принять">
                 <graphic>
                     <ImageView fitHeight="30" fitWidth="30">
                         <Image url="@../icons/check.png" />
@@ -78,9 +79,6 @@
                 </graphic>
             </Button>
         </HBox>
-
-        <!-- Дополнительная информация -->
-        <Label style="-fx-text-fill: #f7f1e3; -fx-font-size: 12; -fx-font-style: italic;" text="Запрос будет автоматически отклонен через: 00:30" />
 
     </VBox>
 

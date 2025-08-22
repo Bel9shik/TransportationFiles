@@ -41,7 +41,7 @@
         <Label fx:id="fileInfoLabel" text="Размер: ..." style="-fx-text-fill: #ecf0f1; -fx-font-size: 14;" visible="false"/>
 
         <!-- Кнопки -->
-        <Button fx:id="acceptBtn" text="Принять файл" style="-fx-background-radius: 15; -fx-background-color: rgba(0,0,0,0.3);
+        <Button fx:id="rejectBtn" text="Отменить отправку" style="-fx-background-radius: 15; -fx-background-color: rgba(0,0,0,0.3);
                 -fx-text-fill: white; -fx-font-size: 14; -fx-padding: 10 30; -fx-cursor: hand; -fx-border-color: white;
                 -fx-border-radius: 15; -fx-border-width: 2;"/>
     </VBox>

@@ -23,8 +23,16 @@ message TransferStatus {
 message PairingRequest {
   string PCName = 1;
   string PCAddress = 2;
+  string fileName = 3;
+  string fileSize = 4;
 }
 
 message PairingResponse {
   bool response = 1;
 }
+
+service CancelService {
+  rpc cancel (CancelRequest) returns (CancelResponse);
+}
+message CancelRequest {}
+message CancelResponse {}
