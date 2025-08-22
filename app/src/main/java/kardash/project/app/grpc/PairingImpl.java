@@ -3,6 +3,7 @@ package kardash.project.app.grpc;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import javafx.application.Platform;
+import kardash.project.app.core.cotrollers.WaitingForRequestController;
 import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.models.IncomingRequestContext;
 import kardash.project.app.models.TransferContext;
@@ -29,13 +30,7 @@ public class PairingImpl extends PairingServiceGrpc.PairingServiceImplBase {
 
         TransferContext.setIncomingRequestContext(context);
 
-        Platform.runLater(() -> {
-            try {
-                ViewController.switchScene("incoming_request.fxml");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
+        WaitingForRequestController.incomingRequest();
 
         try {
             boolean ok = context.answer.get(30, TimeUnit.SECONDS);

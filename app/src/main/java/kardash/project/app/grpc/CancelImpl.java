@@ -16,7 +16,7 @@ public class CancelImpl extends CancelServiceGrpc.CancelServiceImplBase {
         Platform.runLater(() -> {
             ViewController.showAlert("Пользователь отклонил запрос на сопряжение");
             try {
-                ViewController.switchScene("select_user.fxml");
+                ViewController.switchScene("waiting_for_request.fxml");
             } catch (IOException e) {
                 e.printStackTrace();
             }

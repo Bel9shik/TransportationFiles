@@ -25,6 +25,7 @@ public class PairingController {
         PairingServiceGrpc.PairingServiceBlockingStub blockingStub = PairingServiceGrpc.newBlockingStub(channel);
 
         TransportFiles.PairingResponse response = blockingStub.pairingRequest(request);
+        channel.shutdown();
         return response.getResponse();
 
     }
