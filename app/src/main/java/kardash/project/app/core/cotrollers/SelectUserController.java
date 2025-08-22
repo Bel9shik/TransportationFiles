@@ -1,8 +1,7 @@
 package kardash.project.app.core.cotrollers;
 
-import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -20,6 +19,7 @@ import kardash.project.app.models.User;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.Comparator;
 import java.util.Objects;
 
 
@@ -35,12 +35,16 @@ public class SelectUserController {
 
     // Сервис для обнаружения пользователей
     private UserDiscoveryService discoveryService;
-    private ObservableList<User> users = FXCollections.observableArrayList();
+    private ObservableList<User> users;
 
     @FXML
     public void initialize() {
         discoveryService = new UserDiscoveryService();
-        userListView.setItems(users);
+        users = discoveryService.getUsers();
+//        userListView.setItems(users);
+        SortedList<User> sorted = new SortedList<>(users);
+        sorted.setComparator(Comparator.comparing(User::hostName));
+        userListView.setItems(sorted);
         userListView.setCellFactory(this::createUserCell);
         discoveryService.setOnFailed(e -> {
             loadingIndicator.setVisible(false);
@@ -61,12 +65,6 @@ public class SelectUserController {
     private void startUserDiscovery() {
         loadingIndicator.setVisible(true);
         users.clear();
-
-        discoveryService.valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (newValue != null) {
-                Platform.runLater(() -> users.addAll(newValue));
-            }
-        });
 
         // Обновление списка при обнаружении новых пользователей
         discoveryService.start();

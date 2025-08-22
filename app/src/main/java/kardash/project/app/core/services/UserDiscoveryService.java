@@ -5,13 +5,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import kardash.project.app.models.constants.Constants;
 import kardash.project.app.models.User;
+import kardash.project.app.models.constants.Constants;
 import lombok.Getter;
 
 import java.io.IOException;
 import java.net.*;
-import java.sql.Time;
 import java.util.Enumeration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -20,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 public class UserDiscoveryService extends Service<ObservableList<User>> {
 
     @Getter
-    private final ObservableList<User> users;
+    private ObservableList<User> users;
 
     private MulticastSocket socket;
     private InetAddress groupAddress;
@@ -66,8 +65,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
                     socket.receive(packet);
                     // Игнорируем свои же сообщения и loopback
                     String message = new String(packet.getData(), 0, packet.getLength());
-//                    if (!address.getHostAddress().equals(getLocalNetworkIP()) && message.startsWith("DISCOVERY:")) processDiscoveryPackets(message, address);
-                    processDiscoveryPackets(message);
+                    if (!packet.getAddress().getHostAddress().equals(getLocalNetworkIP()) && message.startsWith("DISCOVERY:")) processDiscoveryPackets(message);
                 } catch (SocketTimeoutException | SocketException e) {
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -88,10 +86,13 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
                     User user = new User(ip, port, hostName, System.currentTimeMillis());
 
-                    users.removeIf(u -> u.equals(user));
-                    users.add(user);
+                    Platform.runLater(() -> {
+                        users.stream()
+                                .filter(u -> u.equals(user))
+                                .findFirst()
+                                .ifPresentOrElse(old -> users.set(users.indexOf(old), user), () -> users.add(user));
+                    });
                     System.out.println("add new user. ip: " + ip + " port: " + port + " host: " + hostName);
-                    updateValue(users);
                 }
             }
 
@@ -100,8 +101,8 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
                 try {
                     String localIP = getLocalNetworkIP();
-                    String pcName    = InetAddress.getLocalHost().getHostName();
-                    String message   = "DISCOVERY:" + localIP + ":" + Constants.GRPC_PORT + ":" + pcName;
+                    String pcName = InetAddress.getLocalHost().getHostName();
+                    String message = "DISCOVERY:" + localIP + ":" + Constants.GRPC_PORT + ":" + pcName;
                     byte[] buf = message.getBytes();
                     DatagramPacket packet = new DatagramPacket(buf, buf.length, groupAddress, Constants.MULTICAST_PORT);
                     socket.send(packet);
@@ -114,11 +115,10 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
     private void startCleaner() {
 
-
         cleaner.scheduleWithFixedDelay(() -> Platform.runLater(() -> {
             long now = System.currentTimeMillis();
             users.removeIf(u -> now - u.lastSeen() >= 5000);
-        }), 5, 5, TimeUnit.MILLISECONDS);
+        }), 5, 5, TimeUnit.SECONDS);
 
     }
 
