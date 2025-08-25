@@ -5,6 +5,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
+import kardash.project.app.models.TransferContext;
 import kardash.project.app.models.User;
 import kardash.project.app.models.constants.Constants;
 import lombok.Getter;
@@ -25,11 +26,23 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
     private InetAddress groupAddress;
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
+    private User me;
 
     private final ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor();
 
     public UserDiscoveryService() {
         this.users = FXCollections.observableArrayList();
+        try {
+            String localIP = getLocalNetworkIP();
+            String pcName = InetAddress.getLocalHost().getHostName();
+
+            me = TransferContext.getMeUser();
+            TransferContext.clearMeUser();
+            me = new User(localIP, me.port(), pcName, System.currentTimeMillis());
+            TransferContext.setMeUser(me);
+        } catch (UnknownHostException | SocketException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -100,9 +113,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
             private void sendDiscoveryPacket() {
 
                 try {
-                    String localIP = getLocalNetworkIP();
-                    String pcName = InetAddress.getLocalHost().getHostName();
-                    String message = "DISCOVERY:" + localIP + ":" + Constants.GRPC_PORT + ":" + pcName;
+                    String message = "DISCOVERY:" + me.ip() + ":" + me.port() + ":" + me.hostName();
                     byte[] buf = message.getBytes();
                     DatagramPacket packet = new DatagramPacket(buf, buf.length, groupAddress, Constants.MULTICAST_PORT);
                     socket.send(packet);
@@ -172,7 +183,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
     }
 
-    public static String getLocalNetworkIP() throws SocketException {
+    private String getLocalNetworkIP() throws SocketException {
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while (interfaces.hasMoreElements()) {
             NetworkInterface iface = interfaces.nextElement();

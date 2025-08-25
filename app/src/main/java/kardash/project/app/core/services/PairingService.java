@@ -3,17 +3,16 @@ package kardash.project.app.core.services;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import kardash.project.app.core.cotrollers.PairingController;
+import kardash.project.app.models.User;
 
 public class PairingService extends Service<Boolean> {
 
-    private final String pcName;
-    private final String ip;
+    private final User user;
     private final String fileName;
     private final String stringSize;
 
-    public PairingService(String pcName, String ip, String name, String size) {
-        this.pcName = pcName;
-        this.ip = ip;
+    public PairingService(User user, String name, String size) {
+        this.user = user;
         this.fileName = name;
         this.stringSize = size;
     }
@@ -23,7 +22,7 @@ public class PairingService extends Service<Boolean> {
         return new Task<Boolean>() {
             @Override
             protected Boolean call() {
-                return new PairingController().pairingRequest(pcName, ip, fileName, stringSize);
+                return new PairingController().pairingRequest(user, fileName, stringSize);
             }
         };
     }

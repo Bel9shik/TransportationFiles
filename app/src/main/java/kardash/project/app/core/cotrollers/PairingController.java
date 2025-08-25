@@ -2,23 +2,24 @@ package kardash.project.app.core.cotrollers;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import kardash.project.app.models.User;
 import kardash.project.app.models.constants.Constants;
 import kardash.project.proto.transport.PairingServiceGrpc;
 import kardash.project.proto.transport.TransportFiles;
 
 public class PairingController {
 
-    public boolean pairingRequest(String PCName, String hostName, String fileName, String stringSize) {
+    public boolean pairingRequest(User user, String fileName, String stringSize) {
 
         TransportFiles.PairingRequest request = TransportFiles.PairingRequest.newBuilder()
-                .setPCAddress(hostName)
-                .setPCName(PCName)
+                .setPCName(user.hostName())
+                .setPCAddress(user.ip())
                 .setFileSize(stringSize)
                 .setFileName(fileName)
                 .build();
 
         ManagedChannel channel = ManagedChannelBuilder
-                .forAddress(hostName, Constants.GRPC_PORT)
+                .forAddress(user.ip(), user.port())
                 .usePlaintext()
                 .build();
 

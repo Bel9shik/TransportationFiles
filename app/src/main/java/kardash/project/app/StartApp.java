@@ -21,7 +21,7 @@ public class StartApp extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
 
-        grpcServer = new GRPCServer(Constants.GRPC_PORT);
+        grpcServer = new GRPCServer();
         grpcThread = new Thread(grpcServer);
         grpcThread.start();
 

@@ -22,8 +22,8 @@ public class OutComingRequestController {
 
     @FXML
     public void initialize() {
-        user = TransferContext.getUser();
-        TransferContext.clearUser();
+        user = TransferContext.getAnotherUser();
+        TransferContext.clearAnotherUser();
 
         userNameLabel.setText(user.hostName());
     }

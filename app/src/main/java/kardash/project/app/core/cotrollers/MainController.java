@@ -25,12 +25,6 @@ public class MainController {
         sendController = new SendController();
     }
 
-    public void sendFile(String serverIP, String filePath) {
-
-        sendController.sendFile(serverIP, Constants.GRPC_PORT, filePath);
-
-    }
-
     @FXML
     public void sendFile() {
         try {

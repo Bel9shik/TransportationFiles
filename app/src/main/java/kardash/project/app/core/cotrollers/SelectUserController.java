@@ -18,9 +18,7 @@ import kardash.project.app.models.SendingFile;
 import kardash.project.app.models.TransferContext;
 import kardash.project.app.models.User;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.Comparator;
 import java.util.Objects;
 
@@ -118,12 +116,12 @@ public class SelectUserController {
                 discoveryService.succeeded();
             }
             try {
-                TransferContext.setUser(selected);
+                TransferContext.setAnotherUser(selected);
                 SendingFile file = TransferContext.getFile();
                 ViewController.switchScene("outcoming_request.fxml");
 
-                PairingService pairingService = new PairingService(selected.hostName(),
-                        selected.ip(),
+                PairingService pairingService = new PairingService(
+                        selected,
                         file.file().getName(),
                         file.stringSize());
                 pairingService.setOnSucceeded(e -> {
@@ -132,7 +130,7 @@ public class SelectUserController {
                         if (ok) ViewController.switchScene("send_progress.fxml");
                         else {
                             ViewController.showError("Пользователь отклонил запрос");
-                            TransferContext.clearUser();
+                            TransferContext.clearAnotherUser();
                             ViewController.switchScene("select_user.fxml");
                         }
                     } catch (IOException ex) {
@@ -144,7 +142,7 @@ public class SelectUserController {
                 pairingService.setOnFailed(e -> {
                     ViewController.showError("Ошибка соединения: " + pairingService.getException().getMessage());
                     try {
-                        TransferContext.clearUser();
+                        TransferContext.clearAnotherUser();
                         ViewController.switchScene("select_user.fxml");
                     } catch (IOException ex) {
                         ex.printStackTrace();

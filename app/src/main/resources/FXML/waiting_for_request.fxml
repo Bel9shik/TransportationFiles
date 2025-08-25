@@ -27,9 +27,9 @@
         <!-- Сетевая информация -->
         <VBox alignment="CENTER" spacing="5" style="-fx-background-color: rgba(0,0,0,0.2);
               -fx-background-radius: 10; -fx-padding: 15;">
-            <Label fx:id="ipLabel" text="Ваш IP: 192.168.1.100"
+            <Label fx:id="ipLabel" text="Ваш IP: some ip"
                    style="-fx-text-fill: #f1c40f; -fx-font-size: 14;"/>
-            <Label fx:id="portLabel" text="Порт: 8080"
+            <Label fx:id="portLabel" text="Порт: port"
                    style="-fx-text-fill: #f1c40f; -fx-font-size: 14;"/>
         </VBox>
 
