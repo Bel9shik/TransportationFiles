@@ -6,7 +6,7 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane fx:controller="kardash.project.app.core.cotrollers.IncomingRequestController"
+<AnchorPane fx:controller="kardash.project.app.core.cotrollers.FXMLControllers.IncomingRequestController"
         style="-fx-background-color: linear-gradient(to bottom, #8e44ad, #9b59b6);" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1">
 
     <VBox alignment="CENTER" spacing="30" AnchorPane.bottomAnchor="50" AnchorPane.leftAnchor="50" AnchorPane.rightAnchor="50" AnchorPane.topAnchor="50">

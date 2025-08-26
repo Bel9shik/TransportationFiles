@@ -1,4 +1,4 @@
-package kardash.project.app.core.cotrollers;
+package kardash.project.app.core.cotrollers.FXMLControllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;

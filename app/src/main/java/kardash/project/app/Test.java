@@ -1,8 +1,5 @@
 package kardash.project.app;
 
-import kardash.project.app.core.cotrollers.PairingController;
-
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 public class Test {

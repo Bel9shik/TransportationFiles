@@ -1,9 +1,8 @@
-package kardash.project.app.core.cotrollers;
+package kardash.project.app.core.cotrollers.FXMLControllers;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import kardash.project.app.models.User;
-import kardash.project.app.models.constants.Constants;
 import kardash.project.proto.transport.PairingServiceGrpc;
 import kardash.project.proto.transport.TransportFiles;
 

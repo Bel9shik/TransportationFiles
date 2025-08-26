@@ -1,8 +1,7 @@
-package kardash.project.app.core.cotrollers;
+package kardash.project.app.core.cotrollers.FXMLControllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import kardash.project.app.models.constants.Constants;
 import kardash.project.app.core.cotrollers.files.ReceiveController;
 import kardash.project.app.core.cotrollers.files.SendController;
 import kardash.project.app.core.cotrollers.view.ViewController;
@@ -17,13 +16,11 @@ public class MainController {
     @FXML
     Button sendBtn;
 
-    private final ReceiveController receiveController;
-    private final SendController sendController;
+    @FXML
+    public void initialize() {
 
-    public MainController() {
-        receiveController = new ReceiveController();
-        sendController = new SendController();
     }
+
 
     @FXML
     public void sendFile() {

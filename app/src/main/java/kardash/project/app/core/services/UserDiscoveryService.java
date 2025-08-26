@@ -46,7 +46,7 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
     }
 
     @Override
-    protected Task<ObservableList<User>> createTask() { // TODO: продумать то, что пользователь может уже стать сопряжённым с кем-то, значит его не нужно показывать в списке
+    protected Task<ObservableList<User>> createTask() {
         return new Task<ObservableList<User>>() {
 
             @Override

@@ -2,7 +2,7 @@ package kardash.project.app.core.services;
 
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
-import kardash.project.app.core.cotrollers.PairingController;
+import kardash.project.app.core.cotrollers.FXMLControllers.PairingController;
 import kardash.project.app.models.User;
 
 public class PairingService extends Service<Boolean> {

@@ -1,4 +1,4 @@
-package kardash.project.app.core.cotrollers;
+package kardash.project.app.core.cotrollers.FXMLControllers;
 
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
@@ -117,13 +117,14 @@ public class SelectUserController {
             }
             try {
                 TransferContext.setAnotherUser(selected);
-                SendingFile file = TransferContext.getFile();
+                SendingFile sendingFile = TransferContext.getFile();
                 ViewController.switchScene("outcoming_request.fxml");
 
                 PairingService pairingService = new PairingService(
                         selected,
-                        file.file().getName(),
-                        file.stringSize());
+                        sendingFile.file().getName(),
+                        sendingFile.stringSize());
+
                 pairingService.setOnSucceeded(e -> {
                     boolean ok = pairingService.getValue();
                     try {

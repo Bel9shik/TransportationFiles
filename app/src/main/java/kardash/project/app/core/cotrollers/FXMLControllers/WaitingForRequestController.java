@@ -1,8 +1,7 @@
-package kardash.project.app.core.cotrollers;
+package kardash.project.app.core.cotrollers.FXMLControllers;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.stage.WindowEvent;
 import kardash.project.app.core.cotrollers.view.ViewController;
