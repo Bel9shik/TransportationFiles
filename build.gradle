@@ -13,3 +13,10 @@ buildscript {
         gradlePluginPortal() // Добавляем Gradle Plugin Portal
     }
 }
+
+// Запуск приложения одной командой: ./gradlew run
+tasks.register('run') {
+    dependsOn ':app:run'
+    group = 'application'
+    description = 'Запускает JavaFX-приложение TransportationFiles'
+}
