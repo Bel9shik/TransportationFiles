@@ -13,6 +13,7 @@ import lombok.Getter;
 import java.io.IOException;
 import java.net.*;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +25,8 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
 
     private MulticastSocket socket;
     private InetAddress groupAddress;
+    private InetAddress broadcastAddress; // fallback когда multicast недоступен
+    private NetworkInterface multicastNetworkInterface;
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
     private User me;
@@ -36,9 +39,12 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
             String localIP = getLocalNetworkIP();
             String pcName = InetAddress.getLocalHost().getHostName();
 
-            me = TransferContext.getMeUser();
+            User previousMe = TransferContext.getMeUser();
             TransferContext.clearMeUser();
-            me = new User(localIP, me.port(), pcName, System.currentTimeMillis());
+            if (previousMe == null) {
+                throw new IllegalStateException("gRPC server has not started yet. Restart the application.");
+            }
+            me = new User(localIP, previousMe.port(), pcName, System.currentTimeMillis());
             TransferContext.setMeUser(me);
         } catch (UnknownHostException | SocketException e) {
             e.printStackTrace();
@@ -109,14 +115,25 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
                 }
             }
 
-            // Функция для отправки пакетов
+            // Функция для отправки пакетов (multicast, при ошибке — broadcast)
             private void sendDiscoveryPacket() {
-
+                String message = "DISCOVERY:" + me.ip() + ":" + me.port() + ":" + me.hostName();
+                byte[] buf = message.getBytes();
                 try {
-                    String message = "DISCOVERY:" + me.ip() + ":" + me.port() + ":" + me.hostName();
-                    byte[] buf = message.getBytes();
                     DatagramPacket packet = new DatagramPacket(buf, buf.length, groupAddress, Constants.MULTICAST_PORT);
                     socket.send(packet);
+                } catch (NoRouteToHostException e) {
+                    if (broadcastAddress != null) {
+                        try {
+                            socket.setBroadcast(true);
+                            DatagramPacket broadcastPacket = new DatagramPacket(buf, buf.length, broadcastAddress, Constants.MULTICAST_PORT);
+                            socket.send(broadcastPacket);
+                        } catch (IOException ex) {
+                            // тихо игнорируем
+                        } finally {
+                            try { socket.setBroadcast(false); } catch (SocketException ignored) {}
+                        }
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -134,18 +151,28 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
     }
 
     private void initializeNetwork() {
-
         try {
             groupAddress = InetAddress.getByName(Constants.MULTICAST_GROUP);
             socket = new MulticastSocket(Constants.MULTICAST_PORT);
+            multicastNetworkInterface = getLocalNetworkInterface();
+            broadcastAddress = getBroadcastAddress(multicastNetworkInterface);
+            // Не привязываем сокет к интерфейсу — на macOS это часто даёт "no route to host"
             socket.joinGroup(groupAddress);
             socket.setSoTimeout(1000); // Таймаут для проверки прерывания
-
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to initialize multicast", e);
         }
+    }
 
+    private static InetAddress getBroadcastAddress(NetworkInterface netIf) {
+        if (netIf == null) return null;
+        List<InterfaceAddress> addrs = netIf.getInterfaceAddresses();
+        for (InterfaceAddress ia : addrs) {
+            InetAddress broadcast = ia.getBroadcast();
+            if (broadcast != null) return broadcast;
+        }
+        return null;
     }
 
     @Override
@@ -184,20 +211,33 @@ public class UserDiscoveryService extends Service<ObservableList<User>> {
     }
 
     private String getLocalNetworkIP() throws SocketException {
+        NetworkInterface netIf = getLocalNetworkInterface();
+        if (netIf == null) throw new RuntimeException("No network IP found");
+        Enumeration<InetAddress> addresses = netIf.getInetAddresses();
+        while (addresses.hasMoreElements()) {
+            InetAddress addr = addresses.nextElement();
+            if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                return addr.getHostAddress();
+            }
+        }
+        throw new RuntimeException("No network IP found");
+    }
+
+    /** Интерфейс с локальным IPv4 (не loopback), тот же что и для getLocalNetworkIP(). */
+    private NetworkInterface getLocalNetworkInterface() throws SocketException {
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
         while (interfaces.hasMoreElements()) {
             NetworkInterface iface = interfaces.nextElement();
             if (iface.isLoopback() || !iface.isUp()) continue;
-
             Enumeration<InetAddress> addresses = iface.getInetAddresses();
             while (addresses.hasMoreElements()) {
                 InetAddress addr = addresses.nextElement();
                 if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                    return addr.getHostAddress();
+                    return iface;
                 }
             }
         }
-        throw new RuntimeException("No network IP found");
+        return null;
     }
 
 }

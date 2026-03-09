@@ -21,16 +21,17 @@ public class FilePublisher {
                 .usePlaintext()
                 .build();
 
-        FileTransferServiceGrpc.FileTransferServiceStub stub = FileTransferServiceGrpc.newStub(channel);
+        try {
+            FileTransferServiceGrpc.FileTransferServiceStub stub = FileTransferServiceGrpc.newStub(channel);
 
-        // Создаем latch для ожидания завершения
-        CountDownLatch finishLatch = new CountDownLatch(1);
+            // Создаем latch для ожидания завершения
+            CountDownLatch finishLatch = new CountDownLatch(1);
 
-        Path path = Paths.get(filePath);
-        byte[] fileBytes = Files.readAllBytes(path);
-        String fileName = path.getFileName().toString();
+            Path path = Paths.get(filePath);
+            byte[] fileBytes = Files.readAllBytes(path);
+            String fileName = path.getFileName().toString();
 
-        StreamObserver<TransportFiles.FileChunk> requestObserver = stub.sendFile(new StreamObserver<>() {
+            StreamObserver<TransportFiles.FileChunk> requestObserver = stub.sendFile(new StreamObserver<>() {
             @Override
             public void onNext(TransportFiles.TransferStatus transferStatus) {
                 System.out.println("Status: " + transferStatus.getMessage());
@@ -65,7 +66,14 @@ public class FilePublisher {
         if (!finishLatch.await(10, TimeUnit.MINUTES)) {
             System.out.println("File sending did not finish within 10 minutes");
         }
-
-        channel.shutdown();
+        } finally {
+            channel.shutdown();
+            try {
+                channel.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                channel.shutdownNow();
+            }
+        }
     }
 }
