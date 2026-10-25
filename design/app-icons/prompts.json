@@ -1,6 +1,6 @@
 {
   "generator": "Built-in image_gen",
-  "purpose": "Application icon candidates; not yet installed in the application",
+  "purpose": "Application icon concepts; 03-paired-files is selected and installed in desktop and Android builds",
   "variants": [
     {
       "name": "01-file-exchange",
@@ -14,5 +14,6 @@
       "name": "03-paired-files",
       "prompt": "Use case: logo-brand. Create ONE polished standalone application icon for TransportationFiles, a simple cross-platform file sharing app. Square 1024x1024 composition. Two bold overlapping rounded document cards with folded corners, offset diagonally, forming a memorable interlocking exchange symbol. One card white, the other bright teal; a short thick blue arrow cutout in the white card and a short thick white arrow cutout in the teal card face opposite directions. Dark indigo rounded-square tile with a restrained violet-to-indigo gradient. Transparent outside the tile. Beautiful precisely balanced silhouette, soft shallow depth, large simple shapes, easy to distinguish in a dock at 32 pixels. Even 8% outer padding. No text, no initials, no watermark, no grid or presentation board, no mockup, no tiny details, no scenery. Deliver only one icon."
     }
-  ]
+  ],
+  "selected": "03-paired-files"
 }

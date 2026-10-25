@@ -29,6 +29,8 @@
 
 CI в `.github/workflows/build.yml` выполняет тесты, сборку и запуск готового приложения отдельно на Windows, Linux и macOS. Проверка запуска: `python scripts/smoke_package.py` после `:app:packageApp`; она запускает приложение из временного каталога с пробелом в имени. Подпись, notarization и публикация установщиков не настроены; локально собранное macOS-приложение не подписано Developer ID.
 
+Иконка приложения — вариант `design/app-icons/03-paired-files.png`. Из него подготовлены PNG для окна JavaFX и Linux, ICO для Windows, ICNS для macOS и Android mipmap-ресурсы. Готовые ресурсы хранятся в репозитории; для обычной сборки конвертер изображений не нужен.
+
 ## Android
 
 Минимальная версия — Android 8.0 (API 26). Нужны Android SDK Platform 36, Build Tools 36.0.0, `ANDROID_HOME` или `sdk.dir` в локальном `local.properties`.

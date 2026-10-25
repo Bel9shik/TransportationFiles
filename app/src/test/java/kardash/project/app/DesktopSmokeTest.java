@@ -58,7 +58,10 @@ class DesktopSmokeTest {
                     if (value.startsWith("Файл доставлен и проверен:")) completed.complete(null);
                 });
                 Stage stage = new Stage();
-                ViewController.setStage(stage);
+                try { new StartApp().start(stage); }
+                catch (Exception e) { throw new AssertionError(e); }
+                assertEquals(1, stage.getIcons().size());
+                assertFalse(stage.getIcons().get(0).isError());
                 for (String name : new String[]{"main.fxml", "select_file.fxml", "select_user.fxml", "waiting_for_request.fxml"}) {
                     DesktopTransfers.show(name);
                     assertNotNull(stage.getScene().getRoot());

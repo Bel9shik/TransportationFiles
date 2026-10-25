@@ -22,12 +22,17 @@ tasks.register('packageApp', Exec) {
     def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
     doFirst {
         def output = layout.buildDirectory.dir('package').get().asFile
+        def os = System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT)
+        def icon = os.startsWith('windows') ? file('src/main/packaging/app-icon.ico')
+                : os.startsWith('mac') ? file('src/main/packaging/app-icon.icns')
+                : file('src/main/resources/icons/app-icon.png')
         delete output
         commandLine new File(launcher.get().metadata.installationPath.asFile, 'bin/jpackage').absolutePath,
                 '--type', 'app-image', '--name', 'TransportationFiles',
                 '--input', layout.buildDirectory.dir('install/app/lib').get().asFile.absolutePath,
                 '--main-jar', tasks.jar.archiveFile.get().asFile.name,
                 '--main-class', application.mainClass.get(),
+                '--icon', icon.absolutePath,
                 '--dest', output.absolutePath
     }
 }

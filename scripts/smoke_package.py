@@ -1,5 +1,7 @@
 """Check that the packaged native launcher starts with its bundled Java runtime."""
 import pathlib
+import plistlib
+import struct
 import subprocess
 import sys
 import tempfile
@@ -12,6 +14,20 @@ executables = {
 }
 executable = root / executables[sys.platform]
 assert executable.is_file(), f"Missing packaged launcher: {executable}"
+sources = pathlib.Path(__file__).resolve().parents[1] / "app/src/main"
+if sys.platform == "darwin":
+    contents = root / "TransportationFiles.app/Contents"
+    with (contents / "Info.plist").open("rb") as stream:
+        icon_name = plistlib.load(stream)["CFBundleIconFile"]
+    assert (contents / "Resources" / icon_name).read_bytes() == (sources / "packaging/app-icon.icns").read_bytes()
+elif sys.platform == "win32":
+    icon = (sources / "packaging/app-icon.ico").read_bytes()
+    count = struct.unpack_from("<H", icon, 4)[0]
+    size, offset = struct.unpack_from("<II", icon, 6 + (count - 1) * 16 + 8)
+    assert icon[offset:offset + size] in executable.read_bytes(), "Custom icon missing from Windows launcher"
+else:
+    expected = (sources / "resources/icons/app-icon.png").read_bytes()
+    assert any(icon.read_bytes() == expected for icon in root.rglob("*.png")), "Custom icon missing from Linux package"
 # Launch outside the checkout, including a space in the working directory.
 with tempfile.TemporaryDirectory(prefix="transport smoke ") as directory:
     log = pathlib.Path(directory) / "startup.log"
