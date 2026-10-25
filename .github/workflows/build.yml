@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: desktop-test-reports-${{ runner.os }}
+          name: desktop-test-reports-${{ runner.os }}-${{ runner.arch }}
           path: '**/build/reports/tests/'
   android:
     runs-on: ubuntu-latest
