@@ -1,58 +1,40 @@
 plugins {
-    id 'java'
     id 'application'
-    id 'com.gradleup.shadow' version '9.3.0'
     id 'org.openjfx.javafxplugin' version '0.1.0'
 }
-
 javafx {
-    version = "21"
-    modules = [ 'javafx.controls', 'javafx.fxml' ]
+    version = '21.0.7'
+    modules = ['javafx.controls', 'javafx.fxml']
 }
-
-java {
-    toolchain { languageVersion = JavaLanguageVersion.of(25) }
-}
-
-def getPlatform() {
-    def os = org.gradle.internal.os.OperatingSystem.current()
-    if (os.isWindows()) return "win"
-    if (os.isMacOsX()) return "mac"
-    return "linux"
-}
-
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
 dependencies {
-    implementation project(':proto')
-
-    // Явно подключаем JavaFX
-    implementation "org.openjfx:javafx-controls:21.0.7"
-    implementation "org.openjfx:javafx-fxml:21.0.7"
-
-    implementation 'io.grpc:grpc-netty-shaded:1.73.0'
-    implementation 'io.grpc:grpc-protobuf:1.73.0'
-    implementation 'io.grpc:grpc-stub:1.73.0'
-
-    implementation 'io.projectreactor.tools:blockhound:1.0.8.RELEASE'
-    implementation 'javax.annotation:javax.annotation-api:1.3.2'
-
+    implementation project(':core')
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     compileOnly 'org.projectlombok:lombok:1.18.38'
     annotationProcessor 'org.projectlombok:lombok:1.18.38'
 }
-
-application {
-    mainClass = 'kardash.project.app.StartApp'
-    applicationDefaultJvmArgs = [
-            "--add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED",
-            "--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED"
-    ]
+application { mainClass = 'kardash.project.app.Launcher' }
+// jpackage includes the JRE and JavaFX natives for the build host.
+tasks.register('packageApp', Exec) {
+    dependsOn installDist
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    doFirst {
+        def output = layout.buildDirectory.dir('package').get().asFile
+        def os = System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT)
+        def icon = os.startsWith('windows') ? file('src/main/packaging/app-icon.ico')
+                : os.startsWith('mac') ? file('src/main/packaging/app-icon.icns')
+                : file('src/main/resources/icons/app-icon.png')
+        delete output
+        commandLine new File(launcher.get().metadata.installationPath.asFile, 'bin/jpackage').absolutePath,
+                '--type', 'app-image', '--name', 'TransportationFiles',
+                '--input', layout.buildDirectory.dir('install/app/lib').get().asFile.absolutePath,
+                '--main-jar', tasks.jar.archiveFile.get().asFile.name,
+                '--main-class', application.mainClass.get(),
+                '--icon', icon.absolutePath,
+                '--dest', output.absolutePath
+    }
 }
 
-shadowJar {
-    archiveFileName = "TransportationFiles-all.jar"
-    configurations = [project.configurations.runtimeClasspath]
-    mergeServiceFiles()
-}
-
-compileJava {
-    options.release = 25
-}
+test { useJUnitPlatform() }

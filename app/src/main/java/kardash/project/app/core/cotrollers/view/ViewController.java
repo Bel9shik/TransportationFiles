@@ -16,10 +16,23 @@ public class ViewController {
         if (primaryStage == null) primaryStage = stage;
     }
 
+    private static Object controller;
+
     public static void switchScene(String fxmlFile) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(ViewController.class.getResource("/FXML/" + fxmlFile));
-        Scene scene = new Scene(fxmlLoader.load());
-        primaryStage.setScene(scene);
+        closeController();
+        var root = (javafx.scene.Parent) fxmlLoader.load();
+        controller = fxmlLoader.getController();
+        if (primaryStage.getScene() == null) primaryStage.setScene(new Scene(root, 800, 650));
+        else primaryStage.getScene().setRoot(root);
+    }
+
+    public static void closeController() {
+        if (controller instanceof AutoCloseable closeable) {
+            try { closeable.close(); }
+            catch (Exception e) { e.printStackTrace(); }
+        }
+        controller = null;
     }
 
     public static void showError(String message) {

@@ -1,49 +1,20 @@
 plugins {
-    id 'java'
-    id 'com.google.protobuf' version '0.9.4'
+    id 'java-library'
+    id 'com.google.protobuf' version '0.9.5'
 }
-
-java {
-    toolchain { languageVersion = JavaLanguageVersion.of(25) }
-}
-
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
 protobuf {
-    protoc {
-        artifact = 'com.google.protobuf:protoc:3.25.1'
-    }
-    plugins {
-        grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.73.0'
-        }
-    }
+    protoc { artifact = 'com.google.protobuf:protoc:3.25.8' }
+    plugins { grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.73.0' } }
     generateProtoTasks {
-        all()*.plugins { grpc {} }
-    }
-}
-
-sourceSets {
-    main {
-        java {
-            srcDirs 'build/generated/source/proto/main/grpc'
-            srcDirs 'build/generated/source/proto/main/java'
-        }
-        proto {
-            srcDirs = ['src/main/proto']
+        all().configureEach {
+            builtins { java { option 'lite' } }
+            plugins { grpc { option 'lite' } }
         }
     }
 }
-
 dependencies {
-// https://mvnrepository.com/artifact/io.grpc/grpc-netty-shaded
-    implementation 'io.grpc:grpc-netty-shaded:1.73.0'
-    implementation 'io.grpc:grpc-protobuf:1.73.0'
-    implementation 'io.grpc:grpc-stub:1.73.0'
-    implementation 'javax.annotation:javax.annotation-api:1.3.2'
-
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
-
-test {
-    useJUnitPlatform()
+    api 'io.grpc:grpc-protobuf-lite:1.73.0'
+    api 'io.grpc:grpc-stub:1.73.0'
+    compileOnly 'javax.annotation:javax.annotation-api:1.3.2'
 }

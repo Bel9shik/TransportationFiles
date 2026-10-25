@@ -1,2 +1,13 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
 rootProject.name = 'TransportationFiles'
-include 'proto', 'app'
+include 'proto', 'core', 'app'
+// Desktop builds do not require an installed Android SDK.
+if (providers.gradleProperty('android').orNull == 'true') {
+    include 'android'
+}

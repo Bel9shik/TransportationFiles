@@ -12,7 +12,7 @@
 
         <!-- Информационный текст -->
         <VBox alignment="CENTER" spacing="10">
-            <Label text="Сканирование сети..." style="-fx-text-fill: white; -fx-font-size: 18;"/>
+            <Label text="Готовы принять файл" style="-fx-text-fill: white; -fx-font-size: 18;"/>
             <Label text="Ожидание входящих запросов на передачу файлов"
                    style="-fx-text-fill: #ecf0f1; -fx-font-size: 14;"/>
             <Label fx:id="statusLabel" text="Статус: Активно"
