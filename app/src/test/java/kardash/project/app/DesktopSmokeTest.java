@@ -2,6 +2,10 @@ package kardash.project.app;
 
 import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.stage.Window;
+import javafx.scene.image.ImageView;
+import kardash.project.transfer.TransferClient;
 import javafx.stage.Stage;
 import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.models.IncomingRequestContext;
@@ -29,14 +33,26 @@ class DesktopSmokeTest {
         Path source = Files.write(directory.resolve("source"), new byte[]{1, 2, 3});
         Path destination = directory.resolve("received");
         CompletableFuture<Path> received = new CompletableFuture<>();
+        CompletableFuture<Void> completed = new CompletableFuture<>();
+        CompletableFuture<Void> bytesArrived = new CompletableFuture<>();
+        CountDownLatch allowSave = new CountDownLatch(1);
         try (TransferNode receiver = new TransferNode(0, new TransferNode.Listener() {
             @Override public CompletableFuture<Path> accept(TransferNode.Offer offer) {
                 return CompletableFuture.completedFuture(destination);
+            }
+            @Override public void progress(long bytes, long total) {
+                if (bytes != total) return;
+                bytesArrived.complete(null);
+                try { assertTrue(allowSave.await(10, TimeUnit.SECONDS)); }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new AssertionError(e); }
             }
             @Override public void received(Path file) { received.complete(file); }
             @Override public void failed(String error) { received.completeExceptionally(new AssertionError(error)); }
         })) {
             fx(() -> {
+                DesktopTransfers.status.addListener((observable, old, value) -> {
+                    if (value.startsWith("Файл доставлен и проверен:")) completed.complete(null);
+                });
                 Stage stage = new Stage();
                 ViewController.setStage(stage);
                 for (String name : new String[]{"main.fxml", "select_file.fxml", "select_user.fxml", "waiting_for_request.fxml"}) {
@@ -44,6 +60,7 @@ class DesktopSmokeTest {
                     assertNotNull(stage.getScene().getRoot());
                     stage.show();
                     assertTrue(stage.isShowing());
+                    if (name.equals("select_user.fxml")) snapshot("discovery");
                 }
                 assertTrue(DesktopTransfers.waiting);
                 TransferContext.setIncomingRequestContext(new IncomingRequestContext(
@@ -55,8 +72,63 @@ class DesktopSmokeTest {
                 TransferContext.setFile(new SendingFile(source.toFile(), "3 Б"));
                 DesktopTransfers.show("outcoming_request.fxml");
             });
+            bytesArrived.get(5, TimeUnit.SECONDS);
+            fx(() -> {
+                assertEquals(DesktopTransfers.State.ACTIVE, DesktopTransfers.state.get());
+                ImageView animation = (ImageView) ViewController.getPrimaryStage().getScene().lookup("#transferImage");
+                assertNotNull(animation);
+                assertTrue(animation.getImage().getUrl().endsWith("transfer_active.gif"));
+                assertFalse(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
+                        && "Отправка завершена".equals(popup.getTitle())));
+                snapshot("send-active");
+            });
+            allowSave.countDown();
             assertEquals(destination, received.get(10, TimeUnit.SECONDS));
             assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(destination));
+            completed.get(5, TimeUnit.SECONDS);
+            fx(() -> {
+                Label title = (Label) ViewController.getPrimaryStage().getScene().lookup("#titleLabel");
+                assertNotNull(title, "Transfer screen needs a visible completion heading");
+                assertEquals("Файл отправлен", title.getText());
+                assertTrue(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
+                        && "Отправка завершена".equals(popup.getTitle())));
+                dismissDialogs();
+                snapshot("send-complete");
+            });
+            CompletableFuture<Void> incomingOffer = new CompletableFuture<>();
+            CompletableFuture<Void> incomingDone = new CompletableFuture<>();
+            fx(() -> {
+                TransferContext.clearIncomingRequestContext();
+                DesktopTransfers.status.addListener((observable, old, value) -> {
+                    if (value.startsWith("Приём:")) incomingOffer.complete(null);
+                    if (value.startsWith("Сохранено:")) incomingDone.complete(null);
+                });
+                DesktopTransfers.show("waiting_for_request.fxml");
+            });
+            Path incomingFile = directory.resolve("received-by-desktop");
+            CompletableFuture<Void> upload = CompletableFuture.runAsync(() -> {
+                try (TransferClient client = new TransferClient("127.0.0.1", DesktopTransfers.port())) {
+                    client.send(source, "source", "Test sender", () -> {}, (a, b) -> {});
+                } catch (Exception e) { throw new CompletionException(e); }
+            });
+            incomingOffer.get(5, TimeUnit.SECONDS);
+            fx(() -> {
+                DesktopTransfers.show("receive_progress.fxml");
+                snapshot("receive-active");
+                TransferContext.getIncomingRequestContext().answer().complete(incomingFile);
+            });
+            upload.get(5, TimeUnit.SECONDS);
+            incomingDone.get(5, TimeUnit.SECONDS);
+            fx(() -> {
+                assertEquals(DesktopTransfers.State.SUCCEEDED, DesktopTransfers.state.get());
+                Label title = (Label) ViewController.getPrimaryStage().getScene().lookup("#titleLabel");
+                assertEquals("Файл получен", title.getText());
+                assertTrue(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
+                        && "Приём завершён".equals(popup.getTitle())));
+                dismissDialogs();
+                snapshot("receive-complete");
+            });
+            assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(incomingFile));
             fx(() -> {
                 DesktopTransfers.show("select_file.fxml");
                 Button send = (Button) ViewController.getPrimaryStage().getScene().lookup("#sendBtn");
@@ -64,9 +136,31 @@ class DesktopSmokeTest {
                 assertFalse(send.isDisabled(), "Selected file must survive returning from device selection");
             });
         } finally {
+            allowSave.countDown();
             fx(() -> { ViewController.closeController(); ViewController.getPrimaryStage().close(); DesktopTransfers.close(); });
             Platform.exit();
         }
+    }
+
+    private static void dismissDialogs() {
+        for (Window window : java.util.List.copyOf(Window.getWindows())) {
+            if (window != ViewController.getPrimaryStage()) window.hide();
+        }
+    }
+
+    private static void snapshot(String name) {
+        try {
+            var image = ViewController.getPrimaryStage().getScene().snapshot(null);
+            int width = (int) image.getWidth(), height = (int) image.getHeight();
+            int[] pixels = new int[width * height];
+            image.getPixelReader().getPixels(0, 0, width, height,
+                    javafx.scene.image.PixelFormat.getIntArgbInstance(), pixels, 0, width);
+            var png = new java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            png.setRGB(0, 0, width, height, pixels, 0, width);
+            Path output = Path.of("build", "reports", "screenshots", name + ".png");
+            Files.createDirectories(output.getParent());
+            javax.imageio.ImageIO.write(png, "png", output.toFile());
+        } catch (java.io.IOException e) { throw new AssertionError(e); }
     }
 
     private static void fx(Runnable action) throws Exception {

@@ -18,21 +18,33 @@ public class SelectUserController implements AutoCloseable {
     private UserDiscoveryService discovery;
 
     @FXML public void initialize() {
-        discovery = new UserDiscoveryService();
-        userListView.setItems(discovery.getUsers());
+        userListView.setPlaceholder(new Label("Ищем получателя…"));
         userListView.setCellFactory(view -> new ListCell<>() {
             @Override protected void updateItem(User user, boolean empty) {
                 super.updateItem(user, empty);
                 setText(empty || user == null ? null : user.hostName() + " — " + user.ip() + ":" + user.port());
             }
         });
-        discovery.setOnFailed(event -> {
-            loadingIndicator.setVisible(false);
-            discoveryStatus.setText("Автопоиск недоступен. Введите IP:порт с экрана получателя.");
-        });
-        discovery.messageProperty().addListener((observable, old, message) -> discoveryStatus.setText(message));
         continueBtn.disableProperty().bind(userListView.getSelectionModel().selectedItemProperty().isNull()
                 .and(addressField.textProperty().isEmpty()));
+        handleRefresh();
+    }
+
+    @FXML private void handleRefresh() {
+        if (discovery != null) discovery.cancel();
+        UserDiscoveryService service = new UserDiscoveryService();
+        discovery = service;
+        userListView.setItems(discovery.getUsers());
+        loadingIndicator.setVisible(true);
+        discoveryStatus.setText("Ищем устройства в локальной сети…");
+        discovery.setOnFailed(event -> {
+            if (discovery != service) return;
+            loadingIndicator.setVisible(false);
+            discoveryStatus.setText("Автопоиск недоступен: " + service.getException().getMessage());
+        });
+        discovery.messageProperty().addListener((observable, old, message) -> {
+            if (discovery == service) discoveryStatus.setText(message);
+        });
         discovery.start();
     }
 

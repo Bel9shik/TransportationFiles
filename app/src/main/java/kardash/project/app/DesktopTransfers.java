@@ -2,6 +2,8 @@ package kardash.project.app;
 
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -18,6 +20,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public final class DesktopTransfers {
+    public enum State { ACTIVE, SUCCEEDED, FAILED }
+    public static final ObjectProperty<State> state = new SimpleObjectProperty<>(State.ACTIVE);
     public static final DoubleProperty progress = new SimpleDoubleProperty(-1);
     public static final StringProperty status = new SimpleStringProperty("");
     public static boolean waiting;
@@ -46,10 +50,12 @@ public final class DesktopTransfers {
                 Platform.runLater(() -> {
                     progress.set(1);
                     status.set("Сохранено: " + file);
+                    state.set(State.SUCCEEDED);
+                    ViewController.showCompletion("Приём завершён", "Файл получен и проверен", file.toString());
                 });
             }
             @Override public void failed(String message) {
-                Platform.runLater(() -> { progress.set(0); status.set("Ошибка: " + message); });
+                Platform.runLater(() -> { progress.set(0); status.set("Ошибка: " + message); state.set(State.FAILED); });
             }
         });
     }
@@ -59,6 +65,7 @@ public final class DesktopTransfers {
 
     public static void reset(String message) {
         lastProgress.set(0);
+        state.set(State.ACTIVE);
         progress.set(-1);
         status.set(message);
     }
@@ -80,6 +87,8 @@ public final class DesktopTransfers {
                     client = null;
                     progress.set(1);
                     status.set("Файл доставлен и проверен: " + file.getFileName());
+                    state.set(State.SUCCEEDED);
+                    ViewController.showCompletion("Отправка завершена", "Файл успешно отправлен", file.getFileName().toString());
                 });
             } catch (Exception e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();
@@ -89,6 +98,7 @@ public final class DesktopTransfers {
                     show("send_progress.fxml");
                     progress.set(0);
                     status.set("Ошибка: " + e.getMessage());
+                    state.set(State.FAILED);
                 });
             }
         });
@@ -100,6 +110,7 @@ public final class DesktopTransfers {
         if (bytes != total && now - previous < TimeUnit.MILLISECONDS.toNanos(100)) return;
         if (!lastProgress.compareAndSet(previous, now)) return;
         Platform.runLater(() -> {
+            if (state.get() != State.ACTIVE) return;
             progress.set(total == 0 ? 1 : (double) bytes / total);
             status.set(bytes + " / " + total + " байт; ожидание проверки до подтверждения");
         });

@@ -16,10 +16,15 @@ public final class UserDiscoveryService extends Service<ObservableList<User>> {
     @Override protected Task<ObservableList<User>> createTask() {
         return new Task<>() {
             @Override protected ObservableList<User> call() throws Exception {
+                updateMessage("Ищем устройства в локальной сети…");
                 try (Discovery discovery = new Discovery(DesktopTransfers.port(), DesktopTransfers.name(),
                         peers -> Platform.runLater(() -> {
-                            if (!isCancelled()) users.setAll(peers.stream()
-                                    .map(p -> new User(p.host(), p.port(), p.name(), System.currentTimeMillis())).toList());
+                            if (isCancelled()) return;
+                            var fresh = peers.stream().map(p -> new User(p.host(), p.port(), p.name(), System.currentTimeMillis())).toList();
+                            users.removeIf(user -> !fresh.contains(user));
+                            fresh.stream().filter(user -> !users.contains(user)).forEach(users::add);
+                            updateMessage(users.isEmpty() ? "Ищем устройства… На получателе откройте «Принять файл»."
+                                    : "Найдено устройств: " + users.size());
                         }), this::updateMessage)) {
                     while (!isCancelled()) Thread.sleep(1000);
                 }

@@ -1,10 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:controller="kardash.project.app.core.cotrollers.FXMLControllers.ProgressController"
-      alignment="CENTER" spacing="24" style="-fx-padding: 40;">
-    <Label text="Приём файла" style="-fx-font-size: 26;"/>
-    <ProgressBar fx:id="progressBar" prefWidth="500"/>
-    <Label fx:id="statusLabel" wrapText="true" maxWidth="600"/>
-    <Button text="В меню / отменить передачу" onAction="#handleBack"/>
+      alignment="CENTER" spacing="18" style="-fx-padding: 30; -fx-background-color: linear-gradient(to bottom right, #173b48, #267c75);">
+    <Label fx:id="titleLabel" text="Приём файла" style="-fx-font-size: 30; -fx-font-weight: bold; -fx-text-fill: white;"/>
+    <Label fx:id="phaseLabel" wrapText="true" maxWidth="600" alignment="CENTER" style="-fx-text-fill: #e2e8f0; -fx-font-size: 14;"/>
+    <VBox fx:id="transferCard" userData="receive" alignment="CENTER" spacing="16" maxWidth="600"
+          style="-fx-padding: 24; -fx-background-color: white; -fx-background-radius: 24;">
+        <ImageView fx:id="transferImage" fitWidth="200" fitHeight="200" preserveRatio="true" accessibleText="Состояние передачи"/>
+        <Label fx:id="percentLabel" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #243b55;"/>
+        <ProgressBar fx:id="progressBar" maxWidth="Infinity" prefHeight="16" style="-fx-accent: #299e82;"/>
+        <Label fx:id="statusLabel" wrapText="true" maxWidth="520" alignment="CENTER" style="-fx-text-fill: #243b55; -fx-font-size: 14;"/>
+    </VBox>
+    <Button fx:id="backButton" text="Отменить передачу" onAction="#handleBack"
+            style="-fx-background-radius: 16; -fx-padding: 12 28; -fx-font-size: 15; -fx-background-color: #ffffff; -fx-text-fill: #243b55;"/>
 </VBox>

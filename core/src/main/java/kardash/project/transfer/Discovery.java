@@ -13,6 +13,7 @@ public final class Discovery implements AutoCloseable {
         @Override public String toString() { return name + " — " + host + ":" + port; }
     }
     private record Seen(Peer peer, long at) {}
+    record Broadcast(DatagramSocket socket, InetAddress address) {}
     private static final int PORT = 4445;
     private final String id = UUID.randomUUID().toString();
     private final Map<String, Seen> peers = new ConcurrentHashMap<>();
@@ -20,6 +21,7 @@ public final class Discovery implements AutoCloseable {
     private final MulticastSocket socket;
     private final InetAddress group;
     private final List<NetworkInterface> interfaces = new ArrayList<>();
+    private final List<Broadcast> broadcasts = new ArrayList<>();
     private final Consumer<List<Peer>> updated;
     private final Consumer<String> failed;
     private volatile boolean closed;
@@ -35,22 +37,33 @@ public final class Discovery implements AutoCloseable {
             socket.setTimeToLive(1);
             socket.setSoTimeout(1000);
             for (NetworkInterface network : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!network.isUp() || network.isLoopback() || !network.supportsMulticast()) continue;
+                if (!network.isUp() || network.isLoopback() || network.isPointToPoint()) continue;
                 if (Collections.list(network.getInetAddresses()).stream().noneMatch(a -> a instanceof Inet4Address)) continue;
-                try {
-                    socket.joinGroup(new InetSocketAddress(group, PORT), network);
-                    interfaces.add(network);
-                } catch (IOException ignored) { /* Another interface or manual addressing can still work. */ }
+                if (network.supportsMulticast()) {
+                    try {
+                        socket.joinGroup(new InetSocketAddress(group, PORT), network);
+                        interfaces.add(network);
+                    } catch (IOException ignored) { /* Broadcast can still reach this LAN. */ }
+                }
+                for (InterfaceAddress address : network.getInterfaceAddresses()) {
+                    if (!(address.getAddress() instanceof Inet4Address) || address.getBroadcast() == null) continue;
+                    DatagramSocket sender = new DatagramSocket(null);
+                    try {
+                        sender.setBroadcast(true);
+                        // Bind the source to the LAN interface instead of relying on the VPN default route.
+                        sender.bind(new InetSocketAddress(address.getAddress(), 0));
+                        broadcasts.add(new Broadcast(sender, address.getBroadcast()));
+                    } catch (IOException e) { sender.close(); }
+                }
             }
-            if (interfaces.isEmpty()) throw new IOException("Автопоиск недоступен; укажите IP и порт вручную");
+            if (interfaces.isEmpty() && broadcasts.isEmpty()) {
+                throw new IOException("Нет доступного LAN-интерфейса для автопоиска");
+            }
             byte[] announcement = ("TF1\n" + id + "\n" + port + "\n" + name.replace('\n', ' ')).getBytes(StandardCharsets.UTF_8);
             threads.execute(this::receive);
             threads.scheduleWithFixedDelay(() -> {
-                for (NetworkInterface network : interfaces) {
-                    try {
-                        socket.setNetworkInterface(network);
-                        socket.send(new DatagramPacket(announcement, announcement.length, group, PORT));
-                    } catch (IOException ignored) { /* Retry on the next heartbeat. */ }
+                if (!announce(socket, group, interfaces, broadcasts, announcement) && !closed) {
+                    failed.accept("Не удалось отправить запрос поиска. Проверьте доступ к LAN в VPN и firewall.");
                 }
                 if (peers.values().removeIf(peer -> System.nanoTime() - peer.at() > TimeUnit.SECONDS.toNanos(15))) publish();
             }, 0, 3, TimeUnit.SECONDS);
@@ -58,6 +71,26 @@ public final class Discovery implements AutoCloseable {
             close();
             throw e;
         }
+    }
+
+    static boolean announce(MulticastSocket socket, InetAddress group, List<NetworkInterface> interfaces,
+                            List<Broadcast> broadcasts, byte[] announcement) {
+        boolean sent = false;
+        for (NetworkInterface network : interfaces) {
+            try {
+                socket.setNetworkInterface(network);
+                socket.send(new DatagramPacket(announcement, announcement.length, group, PORT));
+                sent = true;
+            } catch (IOException ignored) { /* Also try directed LAN broadcasts below. */ }
+        }
+        // Multicast can be silently filtered, so broadcast is sent even when multicast send succeeds.
+        for (Broadcast target : broadcasts) {
+            try {
+                target.socket().send(new DatagramPacket(announcement, announcement.length, target.address(), PORT));
+                sent = true;
+            } catch (IOException ignored) { /* Report failure if no interface can send. */ }
+        }
+        return sent;
     }
 
     static Peer decode(String message, String source, String ownId) {
@@ -131,6 +164,7 @@ public final class Discovery implements AutoCloseable {
     @Override public void close() {
         closed = true;
         socket.close();
+        broadcasts.forEach(target -> target.socket().close());
         threads.shutdownNow();
     }
 }
