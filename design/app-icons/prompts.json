@@ -1,0 +1,18 @@
+{
+  "generator": "Built-in image_gen",
+  "purpose": "Application icon candidates; not yet installed in the application",
+  "variants": [
+    {
+      "name": "01-file-exchange",
+      "prompt": "Use case: logo-brand. Create ONE polished standalone application icon for TransportationFiles, a desktop and mobile app that sends files directly between nearby devices. Square 1024x1024 composition. A bold white document sheet with one folded corner, integrated with two thick opposing transfer arrows, one blue and one green, forming a compact balanced symbol. Background is a rich blue rounded-square tile inspired by a navy-to-blue app interface; subtle soft depth, almost flat, crisp silhouettes and carefully aligned geometry. Transparent outside the tile. Icon occupies most of the canvas with even 8% outer padding. Professional contemporary utility app, clear and recognizable at 32 pixels, strong contrast, very few shapes, straight-on view. No letters, no text, no watermark, no mockup, no decorative particles, no thin lines, no surrounding scene. Deliver only the single icon."
+    },
+    {
+      "name": "02-device-link",
+      "prompt": "Use case: logo-brand. Create ONE polished standalone application icon for TransportationFiles, an app for transferring files between computers and phones on a local network. Square 1024x1024 composition. A compact bold white desktop display silhouette and a smaller white phone silhouette, with a single bright mint-green arrow passing between them. Blue-to-teal rounded-square tile, generous negative space inside, transparent outside the tile. Devices should read as simple chunky pictograms, not detailed hardware drawings. Straight-on design with very restrained dimensional highlights, premium contemporary desktop icon, no glossy plastic. Distinctive and recognizable at 32 pixels, symbol large and central, even 8% outer padding. No text, no letters, no watermark, no mockup, no tiny status bars, no scenery. Deliver only one icon."
+    },
+    {
+      "name": "03-paired-files",
+      "prompt": "Use case: logo-brand. Create ONE polished standalone application icon for TransportationFiles, a simple cross-platform file sharing app. Square 1024x1024 composition. Two bold overlapping rounded document cards with folded corners, offset diagonally, forming a memorable interlocking exchange symbol. One card white, the other bright teal; a short thick blue arrow cutout in the white card and a short thick white arrow cutout in the teal card face opposite directions. Dark indigo rounded-square tile with a restrained violet-to-indigo gradient. Transparent outside the tile. Beautiful precisely balanced silhouette, soft shallow depth, large simple shapes, easy to distinguish in a dock at 32 pixels. Even 8% outer padding. No text, no initials, no watermark, no grid or presentation board, no mockup, no tiny details, no scenery. Deliver only one icon."
+    }
+  ]
+}
