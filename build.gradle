@@ -4,6 +4,8 @@ allprojects {
         mavenCentral()
     }
 
+    tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
     group = 'kardash.project.app'
     version = '1.0-SNAPSHOT'
 }
