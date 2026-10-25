@@ -90,9 +90,8 @@ class DesktopSmokeTest {
                 Label title = (Label) ViewController.getPrimaryStage().getScene().lookup("#titleLabel");
                 assertNotNull(title, "Transfer screen needs a visible completion heading");
                 assertEquals("Файл отправлен", title.getText());
-                assertTrue(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
+                assertFalse(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
                         && "Отправка завершена".equals(popup.getTitle())));
-                dismissDialogs();
                 snapshot("send-complete");
             });
             CompletableFuture<Void> incomingOffer = new CompletableFuture<>();
@@ -123,9 +122,8 @@ class DesktopSmokeTest {
                 assertEquals(DesktopTransfers.State.SUCCEEDED, DesktopTransfers.state.get());
                 Label title = (Label) ViewController.getPrimaryStage().getScene().lookup("#titleLabel");
                 assertEquals("Файл получен", title.getText());
-                assertTrue(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
+                assertFalse(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
                         && "Приём завершён".equals(popup.getTitle())));
-                dismissDialogs();
                 snapshot("receive-complete");
             });
             assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(incomingFile));
@@ -139,12 +137,6 @@ class DesktopSmokeTest {
             allowSave.countDown();
             fx(() -> { ViewController.closeController(); ViewController.getPrimaryStage().close(); DesktopTransfers.close(); });
             Platform.exit();
-        }
-    }
-
-    private static void dismissDialogs() {
-        for (Window window : java.util.List.copyOf(Window.getWindows())) {
-            if (window != ViewController.getPrimaryStage()) window.hide();
         }
     }
 

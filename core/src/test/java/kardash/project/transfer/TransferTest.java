@@ -60,6 +60,24 @@ class TransferTest {
         }
     }
 
+    @Test void closedConnectionBeforeApprovalExplainsWhichPeerWasUnreachable() throws Exception {
+        Path source = Files.write(directory.resolve("source"), new byte[]{1});
+        try (var server = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("127.0.0.1"));
+             TransferClient client = new TransferClient("127.0.0.1", server.getLocalPort())) {
+            server.setSoTimeout(5000);
+            var rejected = CompletableFuture.runAsync(() -> {
+                try (var socket = server.accept()) { socket.shutdownOutput(); }
+                catch (IOException e) { throw new CompletionException(e); }
+            });
+            IOException error = assertThrows(IOException.class,
+                    () -> client.send(source, "file", "Test", () -> fail("Must not be accepted"), (a, b) -> {}));
+            rejected.get(5, TimeUnit.SECONDS);
+            assertTrue(error.getMessage().contains("127.0.0.1:" + server.getLocalPort()), error.getMessage());
+            assertTrue(error.getMessage().contains("firewall"), error.getMessage());
+            assertNotNull(error.getCause());
+        }
+    }
+
     @Test void doesNotOverwriteExistingFile() throws Exception {
         Path source = Files.write(directory.resolve("source"), new byte[]{1});
         Path target = Files.write(directory.resolve("target"), new byte[]{7});

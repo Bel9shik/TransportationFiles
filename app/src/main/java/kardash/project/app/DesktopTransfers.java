@@ -51,7 +51,6 @@ public final class DesktopTransfers {
                     progress.set(1);
                     status.set("Сохранено: " + file);
                     state.set(State.SUCCEEDED);
-                    ViewController.showCompletion("Приём завершён", "Файл получен и проверен", file.toString());
                 });
             }
             @Override public void failed(String message) {
@@ -88,7 +87,6 @@ public final class DesktopTransfers {
                     progress.set(1);
                     status.set("Файл доставлен и проверен: " + file.getFileName());
                     state.set(State.SUCCEEDED);
-                    ViewController.showCompletion("Отправка завершена", "Файл успешно отправлен", file.getFileName().toString());
                 });
             } catch (Exception e) {
                 if (e instanceof InterruptedException) Thread.currentThread().interrupt();

@@ -43,15 +43,6 @@ public class ViewController {
         alert.showAndWait();
     }
 
-    public static void showCompletion(String title, String header, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.initOwner(primaryStage);
-        alert.setTitle(title);
-        alert.setHeaderText(header);
-        alert.setContentText(message);
-        alert.show();
-    }
-
     public static void showAlert(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Информация");

@@ -19,9 +19,11 @@ import java.util.function.BiConsumer;
 
 public final class TransferClient implements AutoCloseable {
     private final ManagedChannel channel;
+    private final String endpoint;
 
     public TransferClient(String host, int port) {
         if (host.trim().isEmpty() || port < 1 || port > 65535) throw new IllegalArgumentException("Укажите адрес и порт 1–65535");
+        endpoint = (host.contains(":") ? "[" + host.trim() + "]" : host.trim()) + ":" + port;
         channel = OkHttpChannelBuilder.forAddress(host.trim(), port).usePlaintext().build();
     }
 
@@ -39,6 +41,11 @@ public final class TransferClient implements AutoCloseable {
             accepted.run();
             stream(file, name, size, approval.getTransferToken(), progress);
         } catch (io.grpc.StatusRuntimeException e) {
+            if (e.getStatus().getCode() == io.grpc.Status.Code.UNAVAILABLE) {
+                throw new IOException("Не удалось связаться с получателем " + endpoint
+                        + ". Проверьте, что приложение открыто и входящие соединения разрешены в firewall и VPN."
+                        + " Причина: " + e.getStatus(), e);
+            }
             throw new IOException(e.getStatus().getDescription() == null ? e.toString() : e.getStatus().getDescription(), e);
         }
     }
