@@ -27,7 +27,12 @@ with tempfile.TemporaryDirectory(prefix="transport smoke ") as directory:
             assert "Exception" not in diagnostics and "Error:" not in diagnostics, diagnostics
             print(f"PASS: {sys.platform} packaged launcher remained running with no startup errors")
         finally:
-            process.terminate()
+            if sys.platform == "win32":
+                # jpackage may spawn a child which inherits the log handle.
+                subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            else:
+                process.terminate()
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
