@@ -36,6 +36,32 @@ jobs:
         if: runner.os != 'Linux'
         shell: bash
         run: python scripts/smoke_package.py
+      - name: Build Windows EXE installer
+        if: runner.os == 'Windows'
+        run: ./gradlew.bat :app:packageWindowsInstaller
+      - name: Install and launch Windows application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem app/build/installer/*.exe)
+          if ($installer.Count -ne 1) { throw 'Expected one EXE installer' }
+          $log = Join-Path $env:RUNNER_TEMP 'TransportationFiles-install.log'
+          $process = Start-Process $installer[0].FullName -ArgumentList '/quiet', '/norestart', '/L*v', "`"$log`"" -Wait -PassThru
+          if ($process.ExitCode -notin 0, 3010) {
+            Get-Content $log
+            throw "Installer failed: $($process.ExitCode)"
+          }
+          python scripts/smoke_package.py $env:LOCALAPPDATA
+          if ($LASTEXITCODE -ne 0) { throw 'Installed application failed to launch' }
+          $menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'TransportationFiles/TransportationFiles.lnk'
+          $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'TransportationFiles.lnk'
+          if (!(Test-Path $menu) -or !(Test-Path $desktop)) { throw 'Application shortcuts missing' }
+          Move-Item $installer[0].FullName app/build/installer/TransportationFiles-Windows-X64-Setup.exe
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: TransportationFiles-Windows-X64-Setup
+          path: app/build/installer/*-Setup.exe
       - name: Preserve executable permissions in the app image
         shell: bash
         run: tar -czf TransportationFiles-${{ runner.os }}-${{ runner.arch }}.tar.gz -C app/build/package .

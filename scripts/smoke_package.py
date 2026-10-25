@@ -6,7 +6,7 @@ import subprocess
 import sys
 import tempfile
 
-root = pathlib.Path(__file__).resolve().parents[1] / "app/build/package"
+root = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else pathlib.Path(__file__).resolve().parents[1] / "app/build/package"
 executables = {
     "darwin": "TransportationFiles.app/Contents/MacOS/TransportationFiles",
     "win32": "TransportationFiles/TransportationFiles.exe",
@@ -21,6 +21,7 @@ if sys.platform == "darwin":
         icon_name = plistlib.load(stream)["CFBundleIconFile"]
     assert (contents / "Resources" / icon_name).read_bytes() == (sources / "packaging/app-icon.icns").read_bytes()
 elif sys.platform == "win32":
+    assert (root / "TransportationFiles/runtime/bin/server/jvm.dll").is_file(), "Bundled Java missing"
     icon = (sources / "packaging/app-icon.ico").read_bytes()
     count = struct.unpack_from("<H", icon, 4)[0]
     size, offset = struct.unpack_from("<II", icon, 6 + (count - 1) * 16 + 8)
