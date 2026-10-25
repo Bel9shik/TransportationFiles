@@ -26,6 +26,16 @@ public class SelectFileController {
     protected Label fileSizeLabel;
 
     @FXML
+    public void initialize() {
+        SendingFile selected = TransferContext.getFile();
+        if (selected != null) {
+            fileNameLabel.setText(selected.file().getName());
+            fileSizeLabel.setText("Размер: " + selected.stringSize());
+            sendBtn.setDisable(false);
+        }
+    }
+
+    @FXML
     public void handleBackToMainMenu() {
 
         TransferContext.clearFile();

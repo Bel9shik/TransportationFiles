@@ -7,7 +7,7 @@
 <AnchorPane fx:controller="kardash.project.app.core.cotrollers.FXMLControllers.SelectUserController" xmlns:fx="http://javafx.com/fxml/1"
             style="-fx-background-color: linear-gradient(to bottom, #4a69bd, #6a89cc);">
 
-    <VBox alignment="CENTER" spacing="30" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50"
+    <VBox alignment="CENTER" spacing="15" AnchorPane.topAnchor="50" AnchorPane.bottomAnchor="50"
           AnchorPane.leftAnchor="100" AnchorPane.rightAnchor="100">
 
         <!-- Заголовок -->
@@ -28,6 +28,8 @@
         <ProgressIndicator fx:id="loadingIndicator" progress="-1"
                            style="-fx-progress-color: white;"/>
 
+        <TextField fx:id="addressField" promptText="Или IP:порт получателя (например, 192.168.1.10:50051)"/>
+        <Label fx:id="discoveryStatus" wrapText="true" style="-fx-text-fill: white;"/>
         <!-- Кнопки действий -->
         <HBox spacing="20" alignment="CENTER">
             <Button fx:id="backBtn" onAction="#handleBack" text="Назад" style="-fx-background-radius: 15; -fx-background-color: rgba(0,0,0,0.3);

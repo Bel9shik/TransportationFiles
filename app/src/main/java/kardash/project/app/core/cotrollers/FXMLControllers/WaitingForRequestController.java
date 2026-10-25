@@ -1,67 +1,33 @@
 package kardash.project.app.core.cotrollers.FXMLControllers;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
-import javafx.stage.WindowEvent;
+import kardash.project.app.DesktopTransfers;
 import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.core.services.UserDiscoveryService;
-import kardash.project.app.models.TransferContext;
+import kardash.project.transfer.Discovery;
 
-import java.io.IOException;
+public class WaitingForRequestController implements AutoCloseable {
+    @FXML private Label ipLabel;
+    @FXML private Label portLabel;
+    private UserDiscoveryService discovery;
 
-public class WaitingForRequestController {
-
-    private static UserDiscoveryService discoveryService;
-
-    @FXML
-    protected Label ipLabel;
-
-    @FXML
-    protected Label portLabel;
-
-    @FXML
-    public void initialize() {
-        discoveryService = new UserDiscoveryService();
-
-        ViewController.getPrimaryStage().addEventHandler(WindowEvent.WINDOW_CLOSE_REQUEST, e -> stop());
-
-        ipLabel.setText("Ваш IP: " + TransferContext.getMeUser().ip());
-        portLabel.setText("Порт: " + TransferContext.getMeUser().port());
-
-        discoveryService.start();
+    @FXML public void initialize() {
+        DesktopTransfers.waiting = true;
+        ipLabel.setText("Ваш IP: " + Discovery.addresses());
+        portLabel.setText("Порт: " + DesktopTransfers.port());
+        discovery = new UserDiscoveryService();
+        discovery.setOnFailed(event -> portLabel.setText("Порт: " + DesktopTransfers.port() + "; используйте ручной адрес"));
+        discovery.start();
     }
 
-    public static void incomingRequest() {
-
-        Platform.runLater(() -> {
-            try {
-                ViewController.switchScene("incoming_request.fxml");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-
-        stop();
-
+    @FXML public void handleBack() {
+        DesktopTransfers.waiting = false;
+        DesktopTransfers.show("main.fxml");
     }
 
-    @FXML
-    public void handleBack() {
-
-        stop();
-
-        try {
-            ViewController.switchScene("main.fxml");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    private static void stop() {
-        if (discoveryService != null) {
-            Platform.runLater(() -> discoveryService.cancel());
-        }
+    @Override public void close() {
+        DesktopTransfers.waiting = false;
+        if (discovery != null) discovery.cancel();
     }
 }

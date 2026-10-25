@@ -13,6 +13,8 @@ service PairingService {
 message FileChunk {
   bytes content = 1;
   string filename = 2;
+  string transfer_token = 3;
+  bytes sha256 = 4;
 }
 
 message TransferStatus {
@@ -25,10 +27,13 @@ message PairingRequest {
   string PCAddress = 2;
   string fileName = 3;
   string fileSize = 4;
+  int64 size_bytes = 5;
+  int32 protocol_version = 6;
 }
 
 message PairingResponse {
   bool response = 1;
+  string transfer_token = 2;
 }
 
 service CancelService {

@@ -2,8 +2,6 @@ package kardash.project.app.core.cotrollers.FXMLControllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import kardash.project.app.core.cotrollers.files.ReceiveController;
-import kardash.project.app.core.cotrollers.files.SendController;
 import kardash.project.app.core.cotrollers.view.ViewController;
 
 import java.io.IOException;
