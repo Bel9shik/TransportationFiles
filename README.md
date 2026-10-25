@@ -29,7 +29,7 @@
 
 Для одного EXE-установщика на Windows выполните `./gradlew.bat :app:packageWindowsInstaller` с установленным WiX 3. Результат находится в `app/build/installer/`. Установщик включает Java, позволяет выбрать каталог, устанавливает приложение для текущего пользователя и создаёт ярлыки в меню «Пуск» и на рабочем столе. В CI он называется `TransportationFiles-Windows-X64-Setup.exe`; проверяются установка, ярлыки и запуск установленного приложения. Сертификата подписи Windows пока нет, поэтому SmartScreen может показать предупреждение.
 
-CI в `.github/workflows/build.yml` выполняет тесты, сборку и запуск готового приложения отдельно на Windows x64, Linux x64, macOS Apple Silicon и macOS Intel. Проверка запуска: `python scripts/smoke_package.py` после `:app:packageApp`; она запускает приложение из временного каталога с пробелом в имени. Подпись, notarization и публикация установщиков не настроены; локально собранное macOS-приложение не подписано Developer ID.
+CI в `.github/workflows/build.yml` выполняет тесты, сборку и запуск готового приложения отдельно на Windows x64, Linux x64, macOS Apple Silicon и macOS Intel. Проверка запуска: `python scripts/smoke_package.py` после `:app:packageApp`; она запускает приложение из временного каталога с пробелом в имени. Подпись и notarization не настроены; локально собранное macOS-приложение не подписано Developer ID.
 
 Иконка приложения — вариант `design/app-icons/03-paired-files.png`. Из него подготовлены PNG для окна JavaFX и Linux, ICO для Windows, ICNS для macOS и Android mipmap-ресурсы. Готовые ресурсы хранятся в репозитории; для обычной сборки конвертер изображений не нужен.
 
