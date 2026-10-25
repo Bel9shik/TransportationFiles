@@ -37,4 +37,25 @@ tasks.register('packageApp', Exec) {
     }
 }
 
+tasks.register('packageWindowsInstaller', Exec) {
+    dependsOn packageApp
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(17) }
+    doFirst {
+        if (!System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).startsWith('windows')) {
+            throw new GradleException('Windows installer must be built on Windows with WiX 3 installed')
+        }
+        def output = layout.buildDirectory.dir('installer').get().asFile
+        delete output
+        commandLine new File(launcher.get().metadata.installationPath.asFile, 'bin/jpackage').absolutePath,
+                '--type', 'exe', '--name', 'TransportationFiles', '--app-version', '1.0.0',
+                '--app-image', layout.buildDirectory.dir('package/TransportationFiles').get().asFile.absolutePath,
+                '--icon', file('src/main/packaging/app-icon.ico').absolutePath,
+                '--dest', output.absolutePath,
+                '--install-dir', 'TransportationFiles', '--win-per-user-install', '--win-dir-chooser',
+                '--win-menu', '--win-menu-group', 'TransportationFiles', '--win-shortcut',
+                // Keep this UUID stable so later installers can upgrade this application.
+                '--win-upgrade-uuid', '0ddee7bf-2184-483e-afe7-77c09cb4abf7'
+    }
+}
+
 test { useJUnitPlatform() }
