@@ -1,6 +1,7 @@
 package kardash.project.app;
 
 import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.stage.Window;
@@ -8,6 +9,8 @@ import javafx.scene.image.ImageView;
 import kardash.project.transfer.TransferClient;
 import javafx.stage.Stage;
 import kardash.project.app.core.cotrollers.view.ViewController;
+import kardash.project.app.core.cotrollers.FXMLControllers.IncomingRequestController;
+import kardash.project.app.models.constants.UserConfig;
 import kardash.project.app.models.IncomingRequestContext;
 import kardash.project.app.models.SendingFile;
 import kardash.project.app.models.TransferContext;
@@ -36,6 +39,7 @@ class DesktopSmokeTest {
         CompletableFuture<Void> completed = new CompletableFuture<>();
         CompletableFuture<Void> bytesArrived = new CompletableFuture<>();
         CountDownLatch allowSave = new CountDownLatch(1);
+        var preferences = java.util.prefs.Preferences.userRoot().node("transport-files-tests/" + java.util.UUID.randomUUID());
         try (TransferNode receiver = new TransferNode(0, new TransferNode.Listener() {
             @Override public CompletableFuture<Path> accept(TransferNode.Offer offer) {
                 return CompletableFuture.completedFuture(destination);
@@ -61,12 +65,21 @@ class DesktopSmokeTest {
                     stage.show();
                     assertTrue(stage.isShowing());
                     if (name.equals("select_user.fxml")) snapshot("discovery");
+                    if (name.equals("main.fxml")) {
+                        Label folder = (Label) stage.getScene().lookup("#downloadFolderLabel");
+                        assertFalse(folder.getText().isBlank());
+                        snapshot("download-settings");
+                    }
                 }
                 assertTrue(DesktopTransfers.waiting);
                 TransferContext.setIncomingRequestContext(new IncomingRequestContext(
                         new TransferNode.Offer("Test", "file", 3), new CompletableFuture<>()));
                 DesktopTransfers.show("incoming_request.fxml");
                 assertFalse(DesktopTransfers.waiting);
+                assertNotNull(stage.getScene().lookup("#saveAsBtn"));
+                assertFalse(((Button) stage.getScene().lookup("#acceptBtn")).isDisabled());
+                assertFalse(((Label) stage.getScene().lookup("#destinationLabel")).getText().isBlank());
+                snapshot("incoming-destination");
                 DesktopTransfers.show("receive_progress.fxml");
                 TransferContext.setAnotherUser(new User("127.0.0.1", receiver.port(), "Receiver", 0));
                 TransferContext.setFile(new SendingFile(source.toFile(), "3 Б"));
@@ -104,7 +117,10 @@ class DesktopSmokeTest {
                 });
                 DesktopTransfers.show("waiting_for_request.fxml");
             });
-            Path incomingFile = directory.resolve("received-by-desktop");
+            Path downloads = Files.createDirectory(directory.resolve("Downloads"));
+            Path existing = Files.writeString(downloads.resolve("source"), "keep this file");
+            Path incomingFile = downloads.resolve("source (1)");
+            UserConfig config = new UserConfig(preferences, downloads);
             CompletableFuture<Void> upload = CompletableFuture.runAsync(() -> {
                 try (TransferClient client = new TransferClient("127.0.0.1", DesktopTransfers.port())) {
                     client.send(source, "source", "Test sender", () -> {}, (a, b) -> {});
@@ -112,9 +128,14 @@ class DesktopSmokeTest {
             });
             incomingOffer.get(5, TimeUnit.SECONDS);
             fx(() -> {
-                DesktopTransfers.show("receive_progress.fxml");
+                try {
+                    ViewController.closeController();
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/FXML/incoming_request.fxml"));
+                    loader.setControllerFactory(type -> new IncomingRequestController(config));
+                    ViewController.getPrimaryStage().getScene().setRoot(loader.load());
+                } catch (java.io.IOException e) { throw new AssertionError(e); }
+                ((Button) ViewController.getPrimaryStage().getScene().lookup("#acceptBtn")).fire();
                 snapshot("receive-active");
-                TransferContext.getIncomingRequestContext().answer().complete(incomingFile);
             });
             upload.get(5, TimeUnit.SECONDS);
             incomingDone.get(5, TimeUnit.SECONDS);
@@ -127,6 +148,7 @@ class DesktopSmokeTest {
                 snapshot("receive-complete");
             });
             assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(incomingFile));
+            assertEquals("keep this file", Files.readString(existing));
             fx(() -> {
                 DesktopTransfers.show("select_file.fxml");
                 Button send = (Button) ViewController.getPrimaryStage().getScene().lookup("#sendBtn");
@@ -137,6 +159,8 @@ class DesktopSmokeTest {
             allowSave.countDown();
             fx(() -> { ViewController.closeController(); ViewController.getPrimaryStage().close(); DesktopTransfers.close(); });
             Platform.exit();
+            preferences.removeNode();
+            preferences.flush();
         }
     }
 
