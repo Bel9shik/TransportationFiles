@@ -127,6 +127,17 @@ class DesktopSmokeTest {
                     assertTrue(files.hasFiles());
                     assertEquals(2, files.getFiles().size());
                     assertFalse(files.hasImage());
+                    // CI runs on disposable desktops; do not replace the developer's clipboard locally.
+                    if (System.getenv("CI") != null) {
+                        var clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+                        try {
+                            assertTrue(clipboard.setContent(image));
+                            assertTrue(clipboard.hasImage());
+                            assertEquals(0xff12ab34, clipboard.getImage().getPixelReader().getArgb(0, 0));
+                            assertTrue(clipboard.setContent(files));
+                            assertEquals(files.getFiles(), clipboard.getFiles());
+                        } finally { clipboard.clear(); }
+                    }
                     assertThrows(java.io.IOException.class, () -> FileClipboard.content(java.util.List.of(directory.resolve("missing"))));
                     assertThrows(java.io.IOException.class, () -> FileClipboard.content(java.util.List.of()));
                 } catch (java.io.IOException e) { throw new AssertionError(e); }
