@@ -29,6 +29,12 @@ message PairingRequest {
   string fileSize = 4;
   int64 size_bytes = 5;
   int32 protocol_version = 6;
+  repeated FileInfo files = 7;
+}
+
+message FileInfo {
+  string name = 1;
+  int64 size = 2;
 }
 
 message PairingResponse {

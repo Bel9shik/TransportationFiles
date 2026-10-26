@@ -10,6 +10,8 @@ import kardash.project.app.models.TransferContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import kardash.project.app.FileClipboard;
 
 public class SelectFileController {
 
@@ -29,7 +31,7 @@ public class SelectFileController {
     public void initialize() {
         SendingFile selected = TransferContext.getFile();
         if (selected != null) {
-            fileNameLabel.setText(selected.file().getName());
+            fileNameLabel.setText(selected.description());
             fileSizeLabel.setText("Размер: " + selected.stringSize());
             sendBtn.setDisable(false);
         }
@@ -62,17 +64,24 @@ public class SelectFileController {
     @FXML
     public void handleBrowseBtn() {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Выберите файл для отправки");
+        fileChooser.setTitle("Выберите файлы для отправки");
 
-        File file = fileChooser.showOpenDialog(browseBtn.getScene().getWindow());
+        List<File> files = fileChooser.showOpenMultipleDialog(browseBtn.getScene().getWindow());
 
-        if (file != null) {
-            String stringSize = formatFileSize(file.length());
-            TransferContext.setFile(new SendingFile(file, stringSize));
-            fileNameLabel.setText(file.getName());
+        if (files != null && !files.isEmpty()) {
+            if (files.size() > 200) { ViewController.showError("Выберите не больше 200 файлов"); return; }
+            String stringSize = formatFileSize(files.stream().mapToLong(File::length).sum());
+            TransferContext.setFile(new SendingFile(files, stringSize));
+            fileNameLabel.setText(TransferContext.getFile().description());
             fileSizeLabel.setText("Размер: " + stringSize);
             sendBtn.setDisable(false);
         }
+    }
+
+    @FXML public void copyFiles() {
+        SendingFile selected = TransferContext.getFile();
+        if (selected == null) return;
+        FileClipboard.choose(selected.files().stream().map(File::toPath).toList(), fileSizeLabel::setText);
     }
 
     public static String formatFileSize(long bytes) {

@@ -55,7 +55,7 @@ class DesktopSmokeTest {
         })) {
             fx(() -> {
                 DesktopTransfers.status.addListener((observable, old, value) -> {
-                    if (value.startsWith("Файл доставлен и проверен:")) completed.complete(null);
+                    if (value.startsWith("Файлы доставлены и проверены:")) completed.complete(null);
                 });
                 Stage stage = new Stage();
                 try { new StartApp().start(stage); }
@@ -85,7 +85,7 @@ class DesktopSmokeTest {
                 snapshot("incoming-destination");
                 DesktopTransfers.show("receive_progress.fxml");
                 TransferContext.setAnotherUser(new User("127.0.0.1", receiver.port(), "Receiver", 0));
-                TransferContext.setFile(new SendingFile(source.toFile(), "3 Б"));
+                TransferContext.setFile(new SendingFile(java.util.List.of(source.toFile(), source.toFile()), "6 Б"));
                 DesktopTransfers.show("outcoming_request.fxml");
             });
             bytesArrived.get(5, TimeUnit.SECONDS);
@@ -100,15 +100,47 @@ class DesktopSmokeTest {
             });
             allowSave.countDown();
             assertEquals(destination, received.get(10, TimeUnit.SECONDS));
-            assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(destination));
+            assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(destination.resolve("source")));
+            assertArrayEquals(Files.readAllBytes(source), Files.readAllBytes(destination.resolve("source (1)")));
             completed.get(5, TimeUnit.SECONDS);
             fx(() -> {
                 Label title = (Label) ViewController.getPrimaryStage().getScene().lookup("#titleLabel");
                 assertNotNull(title, "Transfer screen needs a visible completion heading");
-                assertEquals("Файл отправлен", title.getText());
+                assertEquals("Файлы отправлены", title.getText());
+                assertTrue(ViewController.getPrimaryStage().getScene().lookup("#copyButton").isVisible());
                 assertFalse(Window.getWindows().stream().anyMatch(window -> window instanceof Stage popup
                         && "Отправка завершена".equals(popup.getTitle())));
                 snapshot("send-complete");
+            });
+            Path photo = directory.resolve("photo.png");
+            var pixels = new java.awt.image.BufferedImage(2, 3, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            pixels.setRGB(0, 0, 0x12ab34);
+            javax.imageio.ImageIO.write(pixels, "png", photo.toFile());
+            fx(() -> {
+                try {
+                    var image = FileClipboard.content(java.util.List.of(photo));
+                    assertTrue(image.hasImage());
+                    assertFalse(image.hasFiles(), "A photo must paste as pixels, not a file attachment");
+                    assertEquals(2, image.getImage().getWidth());
+                    assertEquals(0xff12ab34, image.getImage().getPixelReader().getArgb(0, 0));
+                    var files = FileClipboard.content(java.util.List.of(photo, source));
+                    assertTrue(files.hasFiles());
+                    assertEquals(2, files.getFiles().size());
+                    assertFalse(files.hasImage());
+                    // CI runs on disposable desktops; do not replace the developer's clipboard locally.
+                    if (System.getenv("CI") != null) {
+                        var clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+                        try {
+                            assertTrue(clipboard.setContent(image));
+                            assertTrue(clipboard.hasImage());
+                            assertEquals(0xff12ab34, clipboard.getImage().getPixelReader().getArgb(0, 0));
+                            assertTrue(clipboard.setContent(files));
+                            assertEquals(files.getFiles(), clipboard.getFiles());
+                        } finally { clipboard.clear(); }
+                    }
+                    assertThrows(java.io.IOException.class, () -> FileClipboard.content(java.util.List.of(directory.resolve("missing"))));
+                    assertThrows(java.io.IOException.class, () -> FileClipboard.content(java.util.List.of()));
+                } catch (java.io.IOException e) { throw new AssertionError(e); }
             });
             CompletableFuture<Void> incomingOffer = new CompletableFuture<>();
             CompletableFuture<Void> incomingDone = new CompletableFuture<>();

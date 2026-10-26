@@ -14,10 +14,29 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
 public final class TransferClient implements AutoCloseable {
+    public record Source(Path path, String name) {}
+
+    public static List<Source> sources(List<Source> files) {
+        if (files.isEmpty() || files.size() > 200) throw new IllegalArgumentException("Выберите от 1 до 200 файлов");
+        Set<String> names = new HashSet<>();
+        List<Source> result = new ArrayList<>();
+        for (Source file : files) {
+            String name = TransferNode.validateFilename(file.name());
+            int dot = name.lastIndexOf('.');
+            String stem = dot > 0 ? name.substring(0, dot) : name;
+            String extension = dot > 0 ? name.substring(dot) : "";
+            int suffix = 1;
+            while (!names.add(java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFC).toLowerCase(Locale.ROOT))) name = stem + " (" + suffix++ + ")" + extension;
+            result.add(new Source(file.path(), TransferNode.validateFilename(name)));
+        }
+        return Collections.unmodifiableList(result);
+    }
+
     private final ManagedChannel channel;
     private final String endpoint;
 
@@ -29,17 +48,33 @@ public final class TransferClient implements AutoCloseable {
 
     public void send(Path file, String name, String sender, Runnable accepted, BiConsumer<Long, Long> progress)
             throws IOException, InterruptedException {
-        TransferNode.validateFilename(name);
-        long size = Files.size(file);
+        send(Collections.singletonList(new Source(file, name)), sender, accepted, progress);
+    }
+
+    public void send(List<Source> selection, String sender, Runnable accepted, BiConsumer<Long, Long> progress)
+            throws IOException, InterruptedException {
+        List<Source> files = sources(selection);
+        List<Long> sizes = new ArrayList<>();
+        long total = 0;
+        for (Source file : files) {
+            if (!Files.isRegularFile(file.path())) throw new IOException("Файл недоступен: " + file.name());
+            long size = Files.size(file.path());
+            sizes.add(size);
+            total = Math.addExact(total, size);
+        }
+        var request = TransportFiles.PairingRequest.newBuilder().setPCName(sender)
+                .setFileName(files.size() == 1 ? files.get(0).name() : "Файлы-" + System.currentTimeMillis())
+                .setFileSize(Long.toString(total)).setSizeBytes(total).setProtocolVersion(files.size() == 1 ? 1 : 2);
+        if (files.size() > 1) for (int i = 0; i < files.size(); i++) {
+            request.addFiles(TransportFiles.FileInfo.newBuilder().setName(files.get(i).name()).setSize(sizes.get(i)));
+        }
         try {
             var approval = PairingServiceGrpc.newBlockingStub(channel).withDeadlineAfter(65, TimeUnit.SECONDS)
-                    .pairingRequest(TransportFiles.PairingRequest.newBuilder()
-                            .setPCName(sender).setFileName(name).setFileSize(Long.toString(size))
-                            .setSizeBytes(size).setProtocolVersion(1).build());
+                    .pairingRequest(request.build());
             if (!approval.getResponse()) throw new IOException("Получатель отклонил запрос");
             if (approval.getTransferToken().isEmpty()) throw new IOException("Получатель использует старую версию приложения");
             accepted.run();
-            stream(file, name, size, approval.getTransferToken(), progress);
+            stream(files, sizes, total, approval.getTransferToken(), progress);
         } catch (io.grpc.StatusRuntimeException e) {
             if (e.getStatus().getCode() == io.grpc.Status.Code.UNAVAILABLE) {
                 throw new IOException("Не удалось связаться с получателем " + endpoint
@@ -50,7 +85,7 @@ public final class TransferClient implements AutoCloseable {
         }
     }
 
-    private void stream(Path file, String name, long size, String token, BiConsumer<Long, Long> progress)
+    private void stream(List<Source> files, List<Long> sizes, long total, String token, BiConsumer<Long, Long> progress)
             throws IOException, InterruptedException {
         CompletableFuture<TransportFiles.TransferStatus> result = new CompletableFuture<>();
         Object ready = new Object();
@@ -73,29 +108,37 @@ public final class TransferClient implements AutoCloseable {
         }
         Response response = new Response();
         FileTransferServiceGrpc.newStub(channel).withDeadlineAfter(10, TimeUnit.MINUTES).sendFile(response);
-        var chunk = TransportFiles.FileChunk.newBuilder().setFilename(name).setTransferToken(token);
-        MessageDigest hash = TransferNode.digest();
-        long count = 0;
-        try (InputStream input = Files.newInputStream(file)) {
-            byte[] buffer = new byte[64 * 1024];
-            int read;
-            while ((read = input.read(buffer)) != -1) {
-                synchronized (ready) {
-                    while (!response.request.isReady() && !result.isDone()) ready.wait(250);
+        long transferred = 0;
+        try {
+            for (int i = 0; i < files.size(); i++) {
+                Source file = files.get(i);
+                long size = sizes.get(i), count = 0;
+                var chunk = TransportFiles.FileChunk.newBuilder().setFilename(file.name()).setTransferToken(token);
+                MessageDigest hash = TransferNode.digest();
+                try (InputStream input = Files.newInputStream(file.path())) {
+                    byte[] buffer = new byte[64 * 1024];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        synchronized (ready) {
+                            while (!response.request.isReady() && !result.isDone()) ready.wait(250);
+                        }
+                        if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
+                        if (result.isDone()) result.get();
+                        if (read > size - count) throw new IOException("Размер исходного файла изменился: " + file.name());
+                        hash.update(buffer, 0, read);
+                        response.request.onNext(chunk.setContent(ByteString.copyFrom(buffer, 0, read)).build());
+                        count += read;
+                        progress.accept(transferred + count, total);
+                    }
                 }
-                if (Thread.currentThread().isInterrupted()) throw new InterruptedException();
-                if (result.isDone()) result.get();
-                hash.update(buffer, 0, read);
-                response.request.onNext(chunk.setContent(ByteString.copyFrom(buffer, 0, read)).build());
-                count += read;
-                progress.accept(count, size);
+                if (count != size) throw new IOException("Размер исходного файла изменился: " + file.name());
+                response.request.onNext(chunk.clearContent().setSha256(ByteString.copyFrom(hash.digest())).build());
+                transferred += count;
             }
-            if (count != size) throw new IOException("Размер исходного файла изменился во время отправки");
-            response.request.onNext(chunk.clearContent().setSha256(ByteString.copyFrom(hash.digest())).build());
             response.request.onCompleted();
             var status = result.get(10, TimeUnit.MINUTES);
             if (!status.getSuccess()) throw new IOException(status.getMessage());
-            progress.accept(size, size);
+            progress.accept(total, total);
         } catch (ExecutionException | TimeoutException e) {
             response.request.cancel("Transfer failed", e);
             throw new IOException("Передача не завершена: " + e.getMessage(), e);

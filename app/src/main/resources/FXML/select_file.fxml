@@ -19,14 +19,14 @@
           AnchorPane.leftAnchor="100" AnchorPane.rightAnchor="100">
 
         <!-- Заголовок -->
-        <Text fill="WHITE" text="Выберите файл для отправки" style="-fx-font-weight: bold;">
+        <Text fill="WHITE" text="Выберите файлы для отправки" style="-fx-font-weight: bold;">
             <Font name="Arial" size="32"/>
         </Text>
 
         <!-- Выбранный файл -->
         <VBox alignment="CENTER" spacing="10" style="-fx-background-color: rgba(255,255,255,0.15);
               -fx-background-radius: 10; -fx-padding: 20; -fx-pref-width: 500;">
-            <Label text="Выбранный файл:" style="-fx-text-fill: #f7f1e3; -fx-font-size: 14;"/>
+            <Label text="Выбранные файлы:" style="-fx-text-fill: #f7f1e3; -fx-font-size: 14;"/>
             <Label fx:id="fileNameLabel" text="Файл не выбран" style="-fx-text-fill: white; -fx-font-size: 16;
                    -fx-font-weight: bold; -fx-padding: 10;"/>
             <Label fx:id="fileSizeLabel" text="Размер: -" style="-fx-text-fill: #dfe4ea; -fx-font-size: 14;"/>
@@ -34,7 +34,7 @@
 
         <!-- Кнопки выбора -->
         <HBox spacing="20" alignment="CENTER">
-            <Button fx:id="browseBtn" onAction="#handleBrowseBtn" text="Выбрать файл" style="-fx-background-radius: 15;
+            <Button fx:id="browseBtn" onAction="#handleBrowseBtn" text="Выбрать файлы" style="-fx-background-radius: 15;
                     -fx-background-color: rgba(255,255,255,0.2); -fx-text-fill: white; -fx-font-size: 14;
                     -fx-padding: 10 30; -fx-cursor: hand; -fx-border-color: white; -fx-border-radius: 15;
                     -fx-border-width: 2;">
@@ -55,6 +55,8 @@
                 </graphic>
             </Button>
         </HBox>
+
+        <Button text="В буфер обмена…" onAction="#copyFiles" style="-fx-background-radius: 15; -fx-padding: 10 20;"/>
 
         <!-- Кнопка назад -->
         <Button fx:id="backToMainMenu" onAction="#handleBackToMainMenu" text="К главному меню" style="-fx-background-radius: 15;

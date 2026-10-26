@@ -17,14 +17,51 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.UUID;
+import java.util.*;
+import java.nio.file.LinkOption;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** One explicitly approved incoming transfer at a time, independent of the UI toolkit. */
 public final class TransferNode implements AutoCloseable {
-    public record Offer(String sender, String filename, long size) {}
+    public record FileInfo(String name, long size) {}
+    public record Offer(String sender, String filename, long size, List<FileInfo> files) {
+        public Offer(String sender, String filename, long size) { this(sender, filename, size, Collections.singletonList(new FileInfo(filename, size))); }
+        public Offer { files = Collections.unmodifiableList(new ArrayList<>(files)); }
+        public boolean multiple() { return files.size() > 1; }
+        public String description() { return String.join("\n", files.stream().map(FileInfo::name).collect(java.util.stream.Collectors.toList())); }
+    }
+
+    static Offer offer(TransportFiles.PairingRequest request) {
+        int version = request.getProtocolVersion();
+        if (version != 1 && version != 2) throw new IllegalArgumentException("Обновите приложение на обоих устройствах");
+        validateFilename(request.getFileName());
+        if (request.getSizeBytes() < 0) throw new IllegalArgumentException("Некорректный размер");
+        if (version == 1) {
+            if (request.getFilesCount() != 0) throw new IllegalArgumentException("Некорректный список файлов");
+            return new Offer(request.getPCName(), request.getFileName(), request.getSizeBytes());
+        }
+        if (request.getFilesCount() < 2 || request.getFilesCount() > 200) throw new IllegalArgumentException("Допустимо от 2 до 200 файлов");
+        List<FileInfo> files = new ArrayList<>();
+        Set<String> names = new HashSet<>();
+        long total = 0;
+        for (var file : request.getFilesList()) {
+            String name = validateFilename(file.getName());
+            if (!names.add(java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFC).toLowerCase(Locale.ROOT)) || file.getSize() < 0 || file.getSize() > Long.MAX_VALUE - total) {
+                throw new IllegalArgumentException("Некорректные имена или размеры файлов");
+            }
+            total += file.getSize();
+            files.add(new FileInfo(name, file.getSize()));
+        }
+        if (total != request.getSizeBytes()) throw new IllegalArgumentException("Не совпадает общий размер файлов");
+        return new Offer(request.getPCName(), request.getFileName(), total, files);
+    }
+
+    public static List<Path> savedFiles(Path target) throws IOException {
+        if (!Files.isDirectory(target)) return Collections.singletonList(target);
+        try (var files = Files.list(target)) { return files.filter(Files::isRegularFile).sorted().collect(java.util.stream.Collectors.toList()); }
+    }
 
     public interface Listener {
         CompletableFuture<Path> accept(Offer offer);
@@ -83,17 +120,13 @@ public final class TransferNode implements AutoCloseable {
         @Override
         public void pairingRequest(TransportFiles.PairingRequest request,
                                    StreamObserver<TransportFiles.PairingResponse> response) {
-            if (request.getProtocolVersion() != 1 || request.getSizeBytes() < 0) {
-                response.onError(Status.FAILED_PRECONDITION
-                        .withDescription("Обновите приложение на обоих устройствах").asRuntimeException());
-                return;
-            }
-            try { validateFilename(request.getFileName()); }
+            Offer offer;
+            try { offer = offer(request); }
             catch (IllegalArgumentException e) {
-                response.onError(Status.INVALID_ARGUMENT.withDescription(e.getMessage()).asRuntimeException());
+                response.onError(Status.FAILED_PRECONDITION.withDescription(e.getMessage()).asRuntimeException());
                 return;
             }
-            Session session = new Session(new Offer(request.getPCName(), request.getFileName(), request.getSizeBytes()));
+            Session session = new Session(offer);
             if (!current.compareAndSet(null, session)) {
                 response.onError(Status.RESOURCE_EXHAUSTED.withDescription("Получатель занят").asRuntimeException());
                 return;
@@ -121,7 +154,7 @@ public final class TransferNode implements AutoCloseable {
                         response.onNext(TransportFiles.PairingResponse.getDefaultInstance());
                     } else {
                         session.target = target.toAbsolutePath();
-                        if (Files.exists(session.target) || !Files.isDirectory(session.target.getParent())) {
+                        if (Files.exists(session.target, LinkOption.NOFOLLOW_LINKS) || !Files.isDirectory(session.target.getParent())) {
                             throw new IOException("Выберите новый файл в существующей папке");
                         }
                         timer.schedule(() -> {
@@ -168,7 +201,8 @@ public final class TransferNode implements AutoCloseable {
         private Path temporary;
         private OutputStream output;
         private long count;
-        private byte[] expectedHash;
+        private long completedBytes;
+        private int fileIndex;
         private boolean done;
         private ScheduledFuture<?> timeout;
 
@@ -182,29 +216,40 @@ public final class TransferNode implements AutoCloseable {
                     Session candidate = current.get();
                     if (candidate == null || candidate.target == null || chunk.getTransferToken().isEmpty()
                             || !candidate.token.equals(chunk.getTransferToken())
-                            || !candidate.offer.filename().equals(chunk.getFilename())
+                            || !candidate.offer.files().get(0).name().equals(chunk.getFilename())
                             || !candidate.started.compareAndSet(false, true)) {
                         throw new IOException("Нет разрешения на эту передачу");
                     }
                     session = candidate;
                     session.cancel = () -> fail(new IOException("Приём отменён"));
-                    temporary = Files.createTempFile(session.target.getParent(), ".transport-", ".part");
-                    output = Files.newOutputStream(temporary);
+                    temporary = session.offer.multiple()
+                            ? Files.createTempDirectory(session.target.getParent(), ".transport-")
+                            : Files.createTempFile(session.target.getParent(), ".transport-", ".part");
                 }
                 if (current.get() != session || !session.token.equals(chunk.getTransferToken())
-                        || !session.offer.filename().equals(chunk.getFilename()) || expectedHash != null) {
+                        || fileIndex >= session.offer.files().size()
+                        || !session.offer.files().get(fileIndex).name().equals(chunk.getFilename())) {
                     throw new IOException("Некорректная последовательность блоков");
                 }
+                FileInfo file = session.offer.files().get(fileIndex);
+                if (output == null) output = Files.newOutputStream(session.offer.multiple() ? temporary.resolve(file.name()) : temporary);
                 ByteString content = chunk.getContent();
-                if (content.size() > session.offer.size() - count) throw new IOException("Размер файла превышен");
+                if (content.size() > file.size() - count) throw new IOException("Размер файла превышен");
                 if (!chunk.getSha256().isEmpty()) {
-                    if (!content.isEmpty() || chunk.getSha256().size() != 32) throw new IOException("Некорректная контрольная сумма");
-                    expectedHash = chunk.getSha256().toByteArray();
+                    if (!content.isEmpty() || chunk.getSha256().size() != 32 || count != file.size()
+                            || !MessageDigest.isEqual(hash.digest(), chunk.getSha256().toByteArray())) {
+                        throw new IOException("Файл повреждён или получен не полностью: " + file.name());
+                    }
+                    output.close();
+                    output = null;
+                    completedBytes += count;
+                    count = 0;
+                    fileIndex++;
                 } else {
                     content.writeTo(output);
                     hash.update(content.asReadOnlyByteBuffer());
                     count += content.size();
-                    listener.progress(count, session.offer.size());
+                    listener.progress(completedBytes + count, session.offer.size());
                 }
             } catch (Exception e) { fail(e); }
         }
@@ -213,12 +258,9 @@ public final class TransferNode implements AutoCloseable {
         public synchronized void onCompleted() {
             if (done) return;
             try {
-                if (session == null || count != session.offer.size() || expectedHash == null
-                        || !MessageDigest.isEqual(hash.digest(), expectedHash)) {
-                    throw new IOException("Файл повреждён или получен не полностью");
+                if (session == null || fileIndex != session.offer.files().size() || completedBytes != session.offer.size()) {
+                    throw new IOException("Файлы получены не полностью");
                 }
-                output.close();
-                output = null;
                 // No REPLACE_EXISTING: a user file created during transfer must survive.
                 Files.move(temporary, session.target);
                 temporary = null;
@@ -241,7 +283,16 @@ public final class TransferNode implements AutoCloseable {
             if (timeout != null) timeout.cancel(false);
             try { if (output != null) output.close(); }
             catch (IOException e) { error.addSuppressed(e); }
-            try { if (temporary != null) Files.deleteIfExists(temporary); }
+            try {
+                if (temporary != null) {
+                    if (Files.isDirectory(temporary)) {
+                        try (var files = Files.list(temporary)) {
+                            for (Path file : files.collect(java.util.stream.Collectors.toList())) Files.deleteIfExists(file);
+                        }
+                    }
+                    Files.deleteIfExists(temporary);
+                }
+            }
             catch (IOException e) { error.addSuppressed(e); }
             if (session != null) {
                 current.compareAndSet(session, null);
