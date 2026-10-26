@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.stage.FileChooser;
+import javafx.stage.DirectoryChooser;
 import kardash.project.app.DesktopTransfers;
 import kardash.project.app.core.cotrollers.view.ViewController;
 import kardash.project.app.models.IncomingRequestContext;
@@ -32,7 +33,7 @@ public class IncomingRequestController {
     @FXML public void initialize() {
         context = TransferContext.getIncomingRequestContext();
         senderLabel.setText("Отправитель: " + context.offer().sender());
-        fileLabel.setText("Файл: " + context.offer().filename());
+        fileLabel.setText(context.offer().multiple() ? "Файлов: " + context.offer().files().size() + "\n" + context.offer().description() : "Файл: " + context.offer().filename());
         sizeLabel.setText("Размер: " + SelectFileController.formatFileSize(context.offer().size()));
         destinationLabel.setText("Сохранить в: " + config.downloadDirectory());
         context.answer().whenComplete((path, error) -> Platform.runLater(() -> {
@@ -50,6 +51,14 @@ public class IncomingRequestController {
 
     @FXML private void saveAs() {
         if (context.answer().isDone()) return;
+        if (context.offer().multiple()) {
+            DirectoryChooser chooser = new DirectoryChooser();
+            chooser.setTitle("Папка для полученных файлов");
+            if (Files.isDirectory(config.downloadDirectory())) chooser.setInitialDirectory(config.downloadDirectory().toFile());
+            File directory = chooser.showDialog(ViewController.getPrimaryStage());
+            if (directory != null) receive(directory.toPath().resolve(context.offer().filename()));
+            return;
+        }
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Сохранить полученный файл");
         chooser.setInitialFileName(context.offer().filename());

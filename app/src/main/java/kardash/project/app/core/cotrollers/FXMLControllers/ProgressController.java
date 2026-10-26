@@ -9,6 +9,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import kardash.project.app.DesktopTransfers;
+import kardash.project.app.FileClipboard;
 import java.util.Objects;
 
 public class ProgressController implements AutoCloseable {
@@ -20,6 +21,7 @@ public class ProgressController implements AutoCloseable {
     @FXML private Label statusLabel;
     @FXML private ImageView transferImage;
     @FXML private Button backButton;
+    @FXML private Button copyButton;
     private String activeTitle;
     private final ChangeListener<DesktopTransfers.State> stateChanged = (observable, old, value) -> renderState();
     private final ChangeListener<Number> progressChanged = (observable, old, value) -> renderProgress();
@@ -36,10 +38,12 @@ public class ProgressController implements AutoCloseable {
     private void renderState() {
         var state = DesktopTransfers.state.get();
         boolean receiving = "receive".equals(transferCard.getUserData());
+        copyButton.setVisible(state == DesktopTransfers.State.SUCCEEDED && !DesktopTransfers.completedFiles.isEmpty());
+        copyButton.setManaged(copyButton.isVisible());
         String image;
         switch (state) {
             case SUCCEEDED -> {
-                titleLabel.setText(receiving ? "Файл получен" : "Файл отправлен");
+                titleLabel.setText(DesktopTransfers.completedFiles.size() > 1 ? (receiving ? "Файлы получены" : "Файлы отправлены") : (receiving ? "Файл получен" : "Файл отправлен"));
                 phaseLabel.setText("Передача завершена · целостность проверена");
                 backButton.setText("Готово — в меню");
                 image = "check.png";
@@ -71,6 +75,8 @@ public class ProgressController implements AutoCloseable {
             case ACTIVE -> progress < 0 ? "Ожидание данных…" : progress >= 1 ? "Проверяем файл…" : String.format("%.0f%%", progress * 100);
         });
     }
+
+    @FXML public void copyFiles() { FileClipboard.choose(DesktopTransfers.completedFiles, DesktopTransfers.status::set); }
 
     @FXML public void handleBack() {
         DesktopTransfers.cancelSend();

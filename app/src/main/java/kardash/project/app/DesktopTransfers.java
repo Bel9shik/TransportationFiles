@@ -16,6 +16,7 @@ import kardash.project.transfer.TransferNode;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -25,6 +26,7 @@ public final class DesktopTransfers {
     public static final DoubleProperty progress = new SimpleDoubleProperty(-1);
     public static final StringProperty status = new SimpleStringProperty("");
     public static boolean waiting;
+    public static List<Path> completedFiles = List.of();
     private static TransferNode node;
     private static TransferClient client;
     private static Future<?> sending;
@@ -47,7 +49,11 @@ public final class DesktopTransfers {
             }
             @Override public void progress(long bytes, long total) { updateProgress(bytes, total); }
             @Override public void received(Path file) {
+                final List<Path> saved;
+                try { saved = TransferNode.savedFiles(file); }
+                catch (IOException e) { failed(e.getMessage()); return; }
                 Platform.runLater(() -> {
+                    completedFiles = saved;
                     progress.set(1);
                     status.set("Сохранено: " + file);
                     state.set(State.SUCCEEDED);
@@ -63,6 +69,7 @@ public final class DesktopTransfers {
     public static String name() { return System.getProperty("user.name", "Desktop"); }
 
     public static void reset(String message) {
+        completedFiles = List.of();
         lastProgress.set(0);
         state.set(State.ACTIVE);
         progress.set(-1);
@@ -71,21 +78,23 @@ public final class DesktopTransfers {
 
     public static void send() {
         var user = TransferContext.getAnotherUser();
-        var file = TransferContext.getFile().file().toPath();
+        var selection = TransferContext.getFile();
+        var files = selection.files().stream().map(file -> new TransferClient.Source(file.toPath(), file.getName())).toList();
         TransferClient transfer = new TransferClient(user.ip(), user.port());
         client = transfer;
-        reset("Ожидание подтверждения: " + file.getFileName());
+        reset("Ожидание подтверждения: " + selection.description());
         sending = worker.submit(() -> {
             try (transfer) {
-                transfer.send(file, file.getFileName().toString(), name(),
+                transfer.send(files, name(),
                         () -> Platform.runLater(() -> {
                             if (client == transfer) show("send_progress.fxml");
                         }), DesktopTransfers::updateProgress);
                 Platform.runLater(() -> {
                     if (client != transfer) return;
                     client = null;
+                    completedFiles = files.stream().map(TransferClient.Source::path).toList();
                     progress.set(1);
-                    status.set("Файл доставлен и проверен: " + file.getFileName());
+                    status.set((files.size() == 1 ? "Файл доставлен и проверен: " : "Файлы доставлены и проверены: ") + selection.description());
                     state.set(State.SUCCEEDED);
                 });
             } catch (Exception e) {

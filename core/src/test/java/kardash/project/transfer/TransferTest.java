@@ -216,9 +216,99 @@ class TransferTest {
         assertThrows(IllegalArgumentException.class, () -> Discovery.endpoint("localhost:0"));
     }
 
+    @Test void transfersOneApprovedBatchWithEmptyFilesAndDuplicateNames() throws Exception {
+        Path first = Files.write(directory.resolve("first"), new byte[]{1, 2, 3});
+        Path empty = Files.write(directory.resolve("empty"), new byte[0]);
+        Path target = directory.resolve("batch");
+        java.util.concurrent.atomic.AtomicInteger approvals = new java.util.concurrent.atomic.AtomicInteger();
+        Listener listener = new Listener(target) {
+            @Override public CompletableFuture<Path> accept(TransferNode.Offer offer) {
+                approvals.incrementAndGet();
+                assertTrue(offer.multiple());
+                assertEquals(3, offer.files().size());
+                assertEquals(6, offer.size());
+                return super.accept(offer);
+            }
+        };
+        try (TransferNode node = new TransferNode(0, listener);
+             TransferClient client = new TransferClient("127.0.0.1", node.port())) {
+            java.util.concurrent.atomic.AtomicLong last = new java.util.concurrent.atomic.AtomicLong();
+            client.send(java.util.List.of(new TransferClient.Source(first, "фото.png"),
+                    new TransferClient.Source(empty, "пустой.txt"), new TransferClient.Source(first, "ФОТО.PNG")),
+                    "Test", () -> {}, (bytes, total) -> {
+                        assertEquals(6, total); assertTrue(bytes >= last.getAndSet(bytes));
+                    });
+            assertEquals(target, listener.received.get(5, TimeUnit.SECONDS));
+            assertEquals(1, approvals.get());
+            assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(target.resolve("фото.png")));
+            assertEquals(0, Files.size(target.resolve("пустой.txt")));
+            assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(target.resolve("ФОТО (1).PNG")));
+            assertEquals(3, TransferNode.savedFiles(target).size());
+            assertNoPartialFiles();
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"bad-second-hash", "missing-second", "cancel"})
+    void incompleteBatchIsNeverPublishedAndRemovesCompletedTemporaryFiles(String mode) throws Exception {
+        Path target = directory.resolve("batch");
+        CountDownLatch bytesArrived = new CountDownLatch(1);
+        Listener tracking = new Listener(target) {
+            @Override public void progress(long bytes, long total) { bytesArrived.countDown(); }
+        };
+        try (TransferNode node = new TransferNode(0, tracking)) {
+            ManagedChannel channel = channel(node);
+            try {
+                var request = request("batch", 1).toBuilder().setProtocolVersion(2)
+                        .addFiles(TransportFiles.FileInfo.newBuilder().setName("empty").setSize(0))
+                        .addFiles(TransportFiles.FileInfo.newBuilder().setName("second").setSize(1)).build();
+                String token = PairingServiceGrpc.newBlockingStub(channel).withDeadlineAfter(5, TimeUnit.SECONDS)
+                        .pairingRequest(request).getTransferToken();
+                CompletableFuture<TransportFiles.TransferStatus> result = new CompletableFuture<>();
+                var stream = FileTransferServiceGrpc.newStub(channel).withDeadlineAfter(5, TimeUnit.SECONDS).sendFile(observer(result));
+                stream.onNext(TransportFiles.FileChunk.newBuilder().setFilename("empty").setTransferToken(token)
+                        .setSha256(ByteString.copyFrom(TransferNode.digest().digest())).build());
+                if (!mode.equals("missing-second")) {
+                    stream.onNext(TransportFiles.FileChunk.newBuilder().setFilename("second").setTransferToken(token)
+                            .setContent(ByteString.copyFrom(new byte[]{1})).build());
+                    assertTrue(bytesArrived.await(3, TimeUnit.SECONDS));
+                    if (mode.equals("cancel")) node.cancelIncoming();
+                    else stream.onNext(TransportFiles.FileChunk.newBuilder().setFilename("second").setTransferToken(token)
+                            .setSha256(ByteString.copyFrom(new byte[32])).build());
+                }
+                stream.onCompleted();
+                assertThrows(ExecutionException.class, () -> result.get(6, TimeUnit.SECONDS));
+                assertFalse(Files.exists(target));
+                assertNoPartialFiles();
+            } finally { channel.shutdownNow(); }
+        }
+    }
+
+    @Test void normalizesNamesBeforeDetectingCollisions() {
+        var files = TransferClient.sources(java.util.List.of(new TransferClient.Source(directory, "é.png"),
+                new TransferClient.Source(directory, "e\u0301.png")));
+        assertEquals("e\u0301 (1).png", files.get(1).name());
+        assertThrows(IllegalArgumentException.class, () -> TransferClient.sources(java.util.List.of()));
+        assertThrows(IllegalArgumentException.class, () -> TransferClient.sources(java.util.Collections.nCopies(201, files.get(0))));
+    }
+
+    @Test void rejectsMalformedBatchManifestsBeforeApproval() {
+        var valid = request("batch", 1).toBuilder().setProtocolVersion(2)
+                .addFiles(TransportFiles.FileInfo.newBuilder().setName("first").setSize(1))
+                .addFiles(TransportFiles.FileInfo.newBuilder().setName("second").setSize(0));
+        assertTrue(TransferNode.offer(valid.build()).multiple());
+        assertThrows(IllegalArgumentException.class, () -> TransferNode.offer(valid.clone().setSizeBytes(2).build()));
+        for (String name : new String[]{"FIRST", "../escape", "NUL", ""}) {
+            assertThrows(IllegalArgumentException.class, () -> TransferNode.offer(valid.clone()
+                    .setFiles(1, TransportFiles.FileInfo.newBuilder().setName(name).setSize(0)).build()));
+        }
+        assertThrows(IllegalArgumentException.class, () -> TransferNode.offer(valid.clone()
+                .setFiles(1, TransportFiles.FileInfo.newBuilder().setName("second").setSize(Long.MAX_VALUE)).build()));
+        assertThrows(IllegalArgumentException.class, () -> TransferNode.offer(valid.clone().setProtocolVersion(1).build()));
+    }
+
     private void assertNoPartialFiles() throws IOException {
         try (var files = Files.list(directory)) {
-            assertTrue(files.noneMatch(path -> path.toString().endsWith(".part")));
+            assertTrue(files.noneMatch(path -> path.getFileName().toString().startsWith(".transport-")));
         }
     }
     private static ManagedChannel channel(TransferNode node) {

@@ -38,7 +38,8 @@ public final class MainActivity extends Activity {
     private WifiManager.MulticastLock multicast;
     private CompletableFuture<Path> pending;
     private boolean receiving, preparing;
-    private Path selected, exporting;
+    private List<TransferClient.Source> selected = Collections.emptyList();
+    private Path exporting;
     private String selectedName;
     private TextView status, local, fileLabel;
     private EditText address;
@@ -53,7 +54,8 @@ public final class MainActivity extends Activity {
     private TextView notice, homeStatus, receiveAddress, receiveTitle, peerHint, transferTitle, transferSubtitle, transferFile, percent;
     private RadioGroup peers;
     private Discovery.Peer selectedPeer;
-    private Button transferAction, exportAction;
+    private Button transferAction, exportAction, copyAction, shareAction;
+    private List<Path> completedFiles = Collections.emptyList();
     private TransferAnimation animation;
     private ImageView resultIcon, brandIcon;
     private Path lastReceived;
@@ -116,10 +118,11 @@ public final class MainActivity extends Activity {
         sendScreen = screen(content);
         heading(sendScreen, "Отправить файл", "Выберите документ и получателя");
         LinearLayout source = card(sendScreen);
-        text(source, "1 · Файл", 18, INK).setTypeface(null, Typeface.BOLD);
+        text(source, "1 · Файлы", 18, INK).setTypeface(null, Typeface.BOLD);
         fileLabel = text(source, "Пока ничего не выбрано", 16, MUTED);
-        choose = button(source, "Выбрать файл", BLUE, () -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                .addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"), OPEN));
+        choose = button(source, "Выбрать файлы", BLUE, () -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE).setType("*/*").putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true), OPEN));
+        button(source, "В буфер / поделиться…", 0xffedf3fa, () -> chooseOutgoing());
         LinearLayout recipients = card(sendScreen);
         text(recipients, "2 · Получатель", 18, INK).setTypeface(null, Typeface.BOLD);
         peerHint = text(recipients, "Ищем устройства в локальной сети…", 14, MUTED);
@@ -186,8 +189,14 @@ public final class MainActivity extends Activity {
         status = text(transferCard, "", 15, MUTED);
         status.setGravity(Gravity.CENTER);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        exportAction = button(transferScreen, "Сохранить файл…", GREEN, () -> exportFile(lastReceived));
+        exportAction = button(transferScreen, "Сохранить файл…", GREEN, () -> {
+            if (completedFiles.size() == 1) exportFile(lastReceived); else chooseFiles(completedFiles, "Полученные файлы");
+        });
         exportAction.setVisibility(View.GONE);
+        copyAction = button(transferScreen, "В буфер обмена…", GREEN, () -> chooseFiles(completedFiles, "В буфер / поделиться"));
+        shareAction = button(transferScreen, "Поделиться…", BLUE, () -> publishFiles(completedFiles, true));
+        copyAction.setVisibility(View.GONE);
+        shareAction.setVisibility(View.GONE);
         transferAction = button(transferScreen, "Отменить передачу", 0xffffffff, () -> {
             if (busy()) cancel(); else showScreen(homeScreen);
         });
@@ -299,6 +308,9 @@ public final class MainActivity extends Activity {
         animation.setVisibility(View.VISIBLE);
         resultIcon.setVisibility(View.GONE);
         exportAction.setVisibility(View.GONE);
+        copyAction.setVisibility(View.GONE);
+        shareAction.setVisibility(View.GONE);
+        completedFiles = Collections.emptyList();
         transferAction.setText("Отменить передачу");
     }
     private void finishTransfer(boolean success, String title, String detail, Path received) {
@@ -314,6 +326,13 @@ public final class MainActivity extends Activity {
         resultIcon.setColorFilter(success ? GREEN : RED);
         resultIcon.setVisibility(View.VISIBLE);
         lastReceived = received;
+        try {
+            completedFiles = !success ? Collections.emptyList() : received != null ? TransferNode.savedFiles(received)
+                    : selected.stream().map(TransferClient.Source::path).collect(java.util.stream.Collectors.toList());
+        } catch (IOException e) { completedFiles = Collections.emptyList(); message(e.getMessage()); }
+        copyAction.setVisibility(completedFiles.isEmpty() ? View.GONE : View.VISIBLE);
+        shareAction.setVisibility(completedFiles.isEmpty() ? View.GONE : View.VISIBLE);
+        exportAction.setText(completedFiles.size() > 1 ? "Полученные файлы…" : "Сохранить файл…");
         exportAction.setVisibility(received != null ? View.VISIBLE : View.GONE);
         transferAction.setText("На главный экран");
     }
@@ -356,7 +375,7 @@ public final class MainActivity extends Activity {
     private boolean busy() { return preparing || receiving || pending != null || client != null; }
     private void setBusy(boolean value) {
         choose.setEnabled(!value);
-        send.setEnabled(!value && selected != null && node != null);
+        send.setEnabled(!value && !selected.isEmpty() && node != null);
         choose.setAlpha(choose.isEnabled() ? 1f : 0.5f);
         send.setAlpha(send.isEnabled() ? 1f : 0.5f);
         address.setEnabled(!value);
@@ -377,7 +396,8 @@ public final class MainActivity extends Activity {
                 @Override public void received(Path file) {
                     ui(() -> {
                         receiving = false;
-                        finishTransfer(true, "Приём завершён", "Файл получен и проверен. Сохраните копию в удобную папку.", file);
+                        finishTransfer(true, "Приём завершён", Files.isDirectory(file) ? "Все файлы получены и проверены. Можно скопировать их или поделиться."
+                                : "Файл получен и проверен. Сохраните копию в удобную папку.", file);
                         setBusy(busy());
                     });
                 }
@@ -424,9 +444,9 @@ public final class MainActivity extends Activity {
         request.setPadding(dp(24), dp(24), dp(24), dp(8));
         ImageView icon = image(request, R.drawable.receive_file, 48);
         icon.setColorFilter(GREEN);
-        text(request, "Входящий файл", 24, INK).setTypeface(null, Typeface.BOLD);
+        text(request, offer.multiple() ? "Входящие файлы: " + offer.files().size() : "Входящий файл", 24, INK).setTypeface(null, Typeface.BOLD);
         text(request, "Отправитель: " + offer.sender(), 15, MUTED);
-        text(request, offer.filename(), 18, INK).setTypeface(null, Typeface.BOLD);
+        text(request, offer.description(), 18, INK).setTypeface(null, Typeface.BOLD);
         text(request, formatSize(offer.size()), 15, MUTED);
         text(request, "После приёма можно выбрать папку для сохранения копии.", 14, MUTED);
         ScrollView requestScroll = new ScrollView(this);
@@ -441,7 +461,7 @@ public final class MainActivity extends Activity {
                         Path directory = Files.createDirectory(inbox.resolve(UUID.randomUUID().toString()));
                         receiving = true;
                         lastProgress.set(0);
-                        beginTransfer("Приём файла", offer.filename(), true);
+                        beginTransfer(offer.multiple() ? "Приём файлов" : "Приём файла", offer.description(), true);
                         answer.complete(directory.resolve(offer.filename()));
                     } catch (IOException e) { answer.completeExceptionally(e); }
                 }).setOnCancelListener(d -> answer.complete(null)).create();
@@ -461,7 +481,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
-        if (result != RESULT_OK || data == null || data.getData() == null) return;
+        if (result != RESULT_OK || data == null) return;
         Uri uri = data.getData();
         if (request == OPEN) {
             if (busy()) { message("Сначала завершите текущую передачу"); return; }
@@ -469,8 +489,12 @@ public final class MainActivity extends Activity {
             setBusy(true);
             fileLabel.setText("Подготовка выбранного файла…");
             message("Подготавливаем файл. Это может занять немного времени.");
-            worker.execute(() -> prepare(uri));
-        } else if (request == SAVE && exporting != null) {
+            List<Uri> uris = new ArrayList<>();
+            if (data.getClipData() != null) {
+                for (int i = 0; i < data.getClipData().getItemCount(); i++) uris.add(data.getClipData().getItemAt(i).getUri());
+            } else if (uri != null) uris.add(uri);
+            worker.execute(() -> prepare(uris));
+        } else if (request == SAVE && exporting != null && uri != null) {
             Path file = exporting;
             worker.execute(() -> {
                 try (OutputStream output = getContentResolver().openOutputStream(uri, "w")) {
@@ -482,69 +506,72 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void prepare(Uri uri) {
-        Path staged = null;
+    private void prepare(List<Uri> uris) {
+        List<TransferClient.Source> staged = new ArrayList<>();
         try {
-            String name = "file";
-            try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
-                if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) name = cursor.getString(0);
-            }
-            TransferNode.validateFilename(name);
-            staged = Files.createTempFile(getCacheDir().toPath(), "outgoing-", ".tmp");
-            try (InputStream input = getContentResolver().openInputStream(uri);
-                 OutputStream output = Files.newOutputStream(staged)) {
-                if (input == null) throw new IOException("Не удалось прочитать выбранный документ");
-                byte[] buffer = new byte[64 * 1024];
-                int read;
-                while ((read = input.read(buffer)) != -1) {
-                    if (destroyed || Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Подготовка отменена");
-                    output.write(buffer, 0, read);
+            if (uris.isEmpty() || uris.size() > 200) throw new IOException("Выберите от 1 до 200 файлов");
+            for (Uri uri : uris) {
+                String name = "file";
+                try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) name = cursor.getString(0);
+                }
+                TransferNode.validateFilename(name);
+                Path path = Files.createTempFile(getCacheDir().toPath(), "outgoing-", ".tmp");
+                staged.add(new TransferClient.Source(path, name));
+                try (InputStream input = getContentResolver().openInputStream(uri);
+                     OutputStream output = Files.newOutputStream(path)) {
+                    if (input == null) throw new IOException("Не удалось прочитать выбранный документ");
+                    byte[] buffer = new byte[64 * 1024];
+                    int read;
+                    while ((read = input.read(buffer)) != -1) {
+                        if (destroyed || Thread.currentThread().isInterrupted()) throw new InterruptedIOException("Подготовка отменена");
+                        output.write(buffer, 0, read);
+                    }
                 }
             }
-            Path ready = staged;
-            String displayName = name;
-            if (destroyed) { Files.deleteIfExists(ready); return; }
+            List<TransferClient.Source> ready = TransferClient.sources(staged);
+            if (destroyed) { for (var file : ready) deleteStaged(file.path()); return; }
             ui(() -> {
-                if (selected != null) deleteStaged(selected);
+                for (var old : selected) deleteStaged(old.path());
                 selected = ready;
-                selectedName = displayName;
+                selectedName = String.join("\n", ready.stream().map(TransferClient.Source::name).collect(java.util.stream.Collectors.toList()));
                 preparing = false;
-                fileLabel.setText(displayName);
+                fileLabel.setText(selectedName);
                 notice.setVisibility(View.GONE);
                 setBusy(busy());
             });
         } catch (Exception e) {
-            if (staged != null) deleteStaged(staged);
+            for (var file : staged) deleteStaged(file.path());
             ui(() -> { preparing = false; fileLabel.setText(selectedName == null ? "Пока ничего не выбрано" : selectedName); message("Ошибка чтения: " + e.getMessage()); setBusy(busy()); });
         }
     }
 
     private void send() {
-        if (busy() || selected == null) return;
+        if (busy() || selected.isEmpty()) return;
         try {
             Discovery.Peer peer = address.getText().toString().trim().isEmpty()
                     ? selectedPeer : Discovery.endpoint(address.getText().toString());
             if (peer == null) { message("Выберите устройство или укажите IP:порт"); return; }
             TransferClient transfer = new TransferClient(peer.host(), peer.port());
             client = transfer;
-            Path file = selected;
+            List<TransferClient.Source> files = selected;
             String name = selectedName;
             setBusy(true);
-            beginTransfer("Отправка файла", name, false);
+            beginTransfer(files.size() > 1 ? "Отправка файлов" : "Отправка файла", name, false);
             lastProgress.set(0);
             progress.setProgress(0);
             worker.execute(() -> {
                 String result;
                 boolean succeeded = false;
                 try (transfer) {
-                    transfer.send(file, name, android.os.Build.MODEL,
+                    transfer.send(files, android.os.Build.MODEL,
                             () -> ui(() -> {
                                 if (client != transfer) return;
                                 percent.setText("Отправляем…");
                                 status.setText("Сохраняйте соединение до подтверждения результата");
                             }), this::showProgress);
                     succeeded = true;
-                    result = "Файл доставлен и проверен получателем";
+                    result = files.size() > 1 ? "Все файлы доставлены и проверены получателем" : "Файл доставлен и проверен получателем";
                 } catch (Exception e) { result = "Ошибка: " + e.getMessage(); }
                 String finalResult = result;
                 boolean success = succeeded;
@@ -583,26 +610,124 @@ public final class MainActivity extends Activity {
 
     private void chooseReceived() {
         if (busy()) { message("Сначала завершите текущую передачу"); return; }
-        File root = new File(getFilesDir(), "received");
-        List<File> files = new ArrayList<>();
-        File[] directories = root.listFiles();
-        if (directories != null) for (File directory : directories) {
-            File[] saved = directory.listFiles(file -> file.isFile() && !(file.getName().startsWith(".transport-") && file.getName().endsWith(".part")));
-            if (saved != null) Collections.addAll(files, saved);
+        Path root = getFilesDir().toPath().resolve("received");
+        if (!Files.isDirectory(root)) { message("Полученных файлов пока нет"); return; }
+        try (var walk = Files.walk(root)) {
+            List<Path> files = walk.filter(Files::isRegularFile)
+                    .filter(file -> { for (Path part : root.relativize(file)) if (part.toString().startsWith(".transport-")) return false; return true; })
+                    .sorted(Comparator.comparingLong((Path file) -> file.toFile().lastModified()).reversed())
+                    .collect(java.util.stream.Collectors.toList());
+            chooseFiles(files, "Полученные файлы");
+        } catch (IOException e) { message("Не удалось прочитать список: " + e.getMessage()); }
+    }
+
+    private void chooseOutgoing() {
+        if (busy() || selected.isEmpty()) { message("Сначала выберите файлы и завершите передачу"); return; }
+        chooseFiles(selected.stream().map(TransferClient.Source::path).collect(java.util.stream.Collectors.toList()), "Выбранные файлы");
+    }
+
+    private String displayName(Path file) {
+        for (var source : selected) if (source.path().equals(file)) return source.name();
+        return file.getFileName().toString();
+    }
+
+    private void chooseFiles(List<Path> files, String title) {
+        if (files.isEmpty()) { message("Файлов пока нет"); return; }
+        boolean[] checked = new boolean[files.size()];
+        Arrays.fill(checked, true);
+        String[] names = files.stream().map(this::displayName).toArray(String[]::new);
+        LinearLayout content = column();
+        content.setPadding(dp(20), dp(16), dp(20), dp(8));
+        text(content, title, 22, INK);
+        text(content, "Одна фотография — как изображение. Для нескольких фото удобнее «Поделиться».", 14, MUTED);
+        List<CheckBox> choices = new ArrayList<>();
+        button(content, "Выбрать все", 0xffedf3fa, () -> {
+            for (CheckBox choice : choices) choice.setChecked(true);
+        });
+        ScrollView body = new ScrollView(this);
+        body.addView(content);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(body)
+                .setPositiveButton("В буфер", null).setNeutralButton("Поделиться", null)
+                .setNegativeButton("Закрыть", null).create();
+        button(content, "Сохранить выбранный файл…", 0xffedf3fa, () -> {
+            List<Path> chosen = chosen(files, checked);
+            if (chosen.size() != 1) { message("Для сохранения копии отметьте один файл"); return; }
+            exportFile(chosen.get(0));
+            dialog.dismiss();
+        });
+        for (int i = 0; i < files.size(); i++) {
+            final int index = i;
+            CheckBox choice = new CheckBox(this);
+            choice.setText(names[i]);
+            choice.setTextColor(INK);
+            choice.setMinHeight(dp(48));
+            choice.setChecked(true);
+            choice.setOnCheckedChangeListener((view, value) -> checked[index] = value);
+            choices.add(choice);
+            content.addView(choice, new LinearLayout.LayoutParams(-1, -2));
         }
-        files.sort(Comparator.comparingLong(File::lastModified).reversed());
-        if (files.isEmpty()) { message("Полученных файлов пока нет"); return; }
-        String[] names = files.stream().map(File::getName).toArray(String[]::new);
-        new AlertDialog.Builder(this).setTitle("Сохранить копию файла").setItems(names, (dialog, index) -> {
-            exportFile(files.get(index).toPath());
-        }).setNegativeButton("Закрыть", null).show();
+        dialog.show();
+        dialog.getWindow().setBackgroundDrawable(rounded(0xffffffff, 24));
+        for (int which : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEUTRAL, AlertDialog.BUTTON_NEGATIVE}) {
+            dialog.getButton(which).setAllCaps(false);
+        }
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            List<Path> chosen = chosen(files, checked);
+            if (chosen.isEmpty()) { message("Отметьте хотя бы один файл"); return; }
+            publishFiles(chosen, false); dialog.dismiss();
+        });
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+            List<Path> chosen = chosen(files, checked);
+            if (chosen.isEmpty()) { message("Отметьте хотя бы один файл"); return; }
+            publishFiles(chosen, true); dialog.dismiss();
+        });
+    }
+
+    private static List<Path> chosen(List<Path> files, boolean[] checked) {
+        List<Path> result = new ArrayList<>();
+        for (int i = 0; i < files.size(); i++) if (checked[i]) result.add(files.get(i));
+        return result;
+    }
+
+    private void publishFiles(List<Path> files, boolean share) {
+        if (files.isEmpty() || preparing) return;
+        List<TransferClient.Source> sources = new ArrayList<>();
+        for (Path file : files) sources.add(new TransferClient.Source(file, displayName(file)));
+        preparing = true;
+        setBusy(true);
+        message("Подготавливаем файлы…");
+        worker.execute(() -> {
+            try {
+                var uris = SharedFilesProvider.prepare(this, sources);
+                ui(() -> {
+                    preparing = false;
+                    setBusy(busy());
+                    var clip = android.content.ClipData.newUri(getContentResolver(), "Файлы", uris.get(0));
+                    for (int i = 1; i < uris.size(); i++) clip.addItem(getContentResolver(), new android.content.ClipData.Item(uris.get(i)));
+                    if (share) {
+                        boolean images = uris.stream().allMatch(uri -> getContentResolver().getType(uri).startsWith("image/"));
+                        Intent intent = new Intent(uris.size() == 1 ? Intent.ACTION_SEND : Intent.ACTION_SEND_MULTIPLE)
+                                .setType(images ? "image/*" : uris.size() == 1 ? getContentResolver().getType(uris.get(0)) : "*/*")
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        intent.setClipData(clip);
+                        if (uris.size() == 1) intent.putExtra(Intent.EXTRA_STREAM, uris.get(0));
+                        else intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+                        try { startActivity(Intent.createChooser(intent, "Отправить через…")); }
+                        catch (android.content.ActivityNotFoundException e) { message("Нет приложения для отправки этих файлов"); }
+                    } else {
+                        ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(clip);
+                        message("Скопировано: " + uris.size() + ". Вставьте в приложение, поддерживающее изображения и файлы.");
+                    }
+                });
+            } catch (Exception e) { ui(() -> { preparing = false; setBusy(busy()); message("Не удалось скопировать: " + e.getMessage()); }); }
+        });
     }
 
     private void exportFile(Path file) {
         if (file == null) return;
         exporting = file;
         startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                .setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, file.getFileName().toString()), SAVE);
+                .setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, displayName(file)), SAVE);
     }
 
     private static String formatSize(long bytes) {
@@ -628,7 +753,7 @@ public final class MainActivity extends Activity {
         if (client != null) client.close();
         closeNetwork();
         worker.shutdownNow();
-        if (selected != null) deleteStaged(selected);
+        for (var file : selected) deleteStaged(file.path());
         super.onDestroy();
     }
 }

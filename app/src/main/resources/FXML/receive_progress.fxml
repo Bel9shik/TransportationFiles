@@ -13,6 +13,8 @@
         <ProgressBar fx:id="progressBar" maxWidth="Infinity" prefHeight="16" style="-fx-accent: #299e82;"/>
         <Label fx:id="statusLabel" wrapText="true" maxWidth="520" alignment="CENTER" style="-fx-text-fill: #243b55; -fx-font-size: 14;"/>
     </VBox>
+    <Button fx:id="copyButton" text="В буфер обмена…" onAction="#copyFiles" visible="false" managed="false"
+            style="-fx-background-radius: 16; -fx-padding: 12 28; -fx-font-size: 15; -fx-background-color: white; -fx-text-fill: #243b55;"/>
     <Button fx:id="backButton" text="Отменить передачу" onAction="#handleBack"
             style="-fx-background-radius: 16; -fx-padding: 12 28; -fx-font-size: 15; -fx-background-color: #ffffff; -fx-text-fill: #243b55;"/>
 </VBox>

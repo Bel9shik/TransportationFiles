@@ -11,7 +11,9 @@
     <VBox alignment="CENTER" spacing="14" maxWidth="660"
           style="-fx-padding: 20; -fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 16;">
         <Label fx:id="senderLabel" wrapText="true" maxWidth="600" style="-fx-text-fill: white; -fx-font-size: 18;"/>
+        <ScrollPane fitToWidth="true" maxHeight="140" style="-fx-background: transparent; -fx-background-color: transparent;">
         <Label fx:id="fileLabel" wrapText="true" maxWidth="600" style="-fx-text-fill: white; -fx-font-size: 16;"/>
+        </ScrollPane>
         <Label fx:id="sizeLabel" style="-fx-text-fill: #dfe4ea; -fx-font-size: 14;"/>
         <Separator/>
         <Label fx:id="destinationLabel" wrapText="true" maxWidth="600" style="-fx-text-fill: white; -fx-font-size: 14;"/>

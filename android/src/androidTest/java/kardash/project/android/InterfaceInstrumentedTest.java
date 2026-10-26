@@ -98,7 +98,7 @@ public class InterfaceInstrumentedTest {
             waitForText("●  Приёмник готов · локальная сеть");
             screenshot("home");
             click("Отправить файл");
-            waitForText("1 · Файл");
+            waitForText("1 · Файлы");
             assertFalse(find("Отправить").isEnabled());
             screenshot("send");
             click("На главный экран");
@@ -149,6 +149,111 @@ public class InterfaceInstrumentedTest {
             instrumentation.runOnMainSync(activity::finish);
             instrumentation.waitForIdleSync();
             Files.deleteIfExists(source);
+        }
+    }
+
+    @Test public void batchReceiveClipboardSelectionAndMultiDocumentSend() throws Exception {
+        MainActivity activity = (MainActivity) instrumentation.startActivitySync(new Intent(
+                instrumentation.getTargetContext(), MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        Path directory = Files.createTempDirectory(activity.getCacheDir().toPath(), "batch-test-");
+        Path photo = directory.resolve("photo.png"), note = directory.resolve("notes.txt");
+        Bitmap bitmap = Bitmap.createBitmap(3, 2, Bitmap.Config.ARGB_8888);
+        bitmap.eraseColor(0xff12ab34);
+        try (var out = Files.newOutputStream(photo)) { assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)); }
+        bitmap.recycle();
+        Files.write(note, new byte[]{4, 5, 6});
+        ExecutorService worker = Executors.newSingleThreadExecutor();
+        try {
+            waitForText("●  Приёмник готов · локальная сеть");
+            AtomicInteger port = new AtomicInteger();
+            instrumentation.runOnMainSync(() -> {
+                TextView endpoint = activity.getWindow().getDecorView().findViewWithTag("local-address");
+                port.set(Integer.parseInt(endpoint.getText().toString().split("Порт: ")[1]));
+            });
+            Future<?> incoming = worker.submit(() -> {
+                try (TransferClient client = new TransferClient("127.0.0.1", port.get())) {
+                    client.send(java.util.Arrays.asList(new TransferClient.Source(photo, "photo.png"),
+                            new TransferClient.Source(note, "notes.txt")), "Batch sender", () -> {}, (a, b) -> {});
+                } catch (Exception e) { throw new RuntimeException(e); }
+            });
+            waitForText("Входящие файлы: 2");
+            screenshot("batch-incoming");
+            click("Принять");
+            incoming.get(20, TimeUnit.SECONDS);
+            waitForText("Приём завершён");
+            screenshot("batch-complete");
+            click("В буфер обмена…");
+            screenshot("clipboard-selection");
+            click("notes.txt");
+            instrumentation.runOnMainSync(() -> activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE));
+            Thread.sleep(1500);
+            screenshot("clipboard-landscape");
+            click("В буфер");
+            instrumentation.runOnMainSync(() -> activity.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT));
+            waitForText("Скопировано: 1. Вставьте в приложение, поддерживающее изображения и файлы.");
+            java.util.concurrent.atomic.AtomicReference<android.content.ClipData> copied = new java.util.concurrent.atomic.AtomicReference<>();
+            instrumentation.runOnMainSync(() -> copied.set(((android.content.ClipboardManager)
+                    activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE)).getPrimaryClip()));
+            assertEquals(1, copied.get().getItemCount());
+            assertTrue(copied.get().getDescription().hasMimeType("image/png"));
+            var resolver = activity.getContentResolver();
+            var uri = copied.get().getItemAt(0).getUri();
+            try (var input = resolver.openInputStream(uri)) {
+                Bitmap pasted = android.graphics.BitmapFactory.decodeStream(input);
+                assertNotNull(pasted);
+                assertEquals(0xff12ab34, pasted.getPixel(0, 0));
+                pasted.recycle();
+            }
+            try { resolver.openOutputStream(uri); fail("Shared content must be read-only"); }
+            catch (java.io.FileNotFoundException expected) { }
+            var escape = new android.net.Uri.Builder().scheme("content").authority(activity.getPackageName() + ".shared")
+                    .appendPath("..").appendPath("../files/private").build();
+            try { resolver.openInputStream(escape); fail("Provider must reject traversal"); }
+            catch (java.io.FileNotFoundException expected) { }
+            click("В буфер обмена…");
+            click("В буфер");
+            waitForText("Скопировано: 2. Вставьте в приложение, поддерживающее изображения и файлы.");
+            instrumentation.runOnMainSync(() -> copied.set(((android.content.ClipboardManager)
+                    activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE)).getPrimaryClip()));
+            assertEquals(2, copied.get().getItemCount());
+            assertTrue(copied.get().getDescription().hasMimeType("image/png"));
+            assertTrue(copied.get().getDescription().hasMimeType("text/plain"));
+            click("На главный экран");
+            click("Отправить файл");
+            instrumentation.runOnMainSync(() -> {
+                Intent documents = new Intent();
+                documents.setClipData(copied.get());
+                activity.onActivityResult(1, android.app.Activity.RESULT_OK, documents);
+            });
+            waitForText("notes.txt\nphoto.png");
+            CompletableFuture<Path> outgoing = new CompletableFuture<>();
+            Path destination = directory.resolve("outgoing");
+            try (TransferNode receiver = new TransferNode(0, new TransferNode.Listener() {
+                @Override public CompletableFuture<Path> accept(TransferNode.Offer offer) {
+                    assertEquals(2, offer.files().size());
+                    return CompletableFuture.completedFuture(destination);
+                }
+                @Override public void received(Path file) { outgoing.complete(file); }
+                @Override public void failed(String error) { outgoing.completeExceptionally(new AssertionError(error)); }
+            })) {
+                instrumentation.runOnMainSync(() -> {
+                    android.widget.EditText address = activity.getWindow().getDecorView().findViewWithTag("recipient-address");
+                    address.setText("127.0.0.1:" + receiver.port());
+                });
+                click("Отправить");
+                waitForText("Отправка завершена");
+                assertEquals(destination, outgoing.get(5, TimeUnit.SECONDS));
+                assertArrayEquals(Files.readAllBytes(photo), Files.readAllBytes(destination.resolve("photo.png")));
+                assertArrayEquals(Files.readAllBytes(note), Files.readAllBytes(destination.resolve("notes.txt")));
+                screenshot("batch-sent");
+            }
+        } finally {
+            worker.shutdownNow();
+            instrumentation.runOnMainSync(activity::finish);
+            instrumentation.waitForIdleSync();
+            try (var files = Files.walk(directory)) {
+                for (Path file : files.sorted(java.util.Comparator.reverseOrder()).collect(java.util.stream.Collectors.toList())) Files.deleteIfExists(file);
+            }
         }
     }
 

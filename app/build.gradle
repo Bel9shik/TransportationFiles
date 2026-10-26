@@ -47,7 +47,7 @@ tasks.register('packageWindowsInstaller', Exec) {
         def output = layout.buildDirectory.dir('installer').get().asFile
         delete output
         commandLine new File(launcher.get().metadata.installationPath.asFile, 'bin/jpackage').absolutePath,
-                '--type', 'exe', '--name', 'TransportationFiles', '--app-version', '1.0.0',
+                '--type', 'exe', '--name', 'TransportationFiles', '--app-version', '1.1.0',
                 '--app-image', layout.buildDirectory.dir('package/TransportationFiles').get().asFile.absolutePath,
                 '--icon', file('src/main/packaging/app-icon.ico').absolutePath,
                 '--dest', output.absolutePath,
