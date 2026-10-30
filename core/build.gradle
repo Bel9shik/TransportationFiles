@@ -14,3 +14,9 @@ tasks.register('interopDesktop', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'kardash.project.transfer.DesktopInterop'
 }
+
+tasks.register('flutterInterop', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'kardash.project.transfer.FlutterInterop'
+}
