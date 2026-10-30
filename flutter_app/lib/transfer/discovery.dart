@@ -169,6 +169,8 @@ class Discovery {
             _receiver?.joinMulticast(group, nic);
           } on SocketException {
             /* May already be joined. */
+          } on OSError {
+            /* Native joinMulticast reports duplicate membership as OSError. */
           }
           // Multicast route errors must not disable directed broadcast.
           for (final destination in [address.broadcast!, group]) {
@@ -194,6 +196,8 @@ class Discovery {
               _listen(socket, answer: false);
               _senders.add((socket, destination, address));
             } on SocketException {
+              socket?.close();
+            } on OSError {
               socket?.close();
             }
           }
