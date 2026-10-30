@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
@@ -13,6 +14,14 @@ import 'transfer/transfer.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Color(0xff142c49),
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
   if (Platform.isMacOS) FilePicker.skipEntitlementsChecks();
   runApp(const TransportApp());
   WidgetsBinding.instance.addPostFrameCallback((_) async {

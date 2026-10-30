@@ -1,0 +1,8 @@
+// shortcut: irondash_engine_context 0.5.5 ships a 4-KB JNI shim. Build the same
+// four-symbol ABI in app/src/main/cpp until upstream provides 16-KB binaries.
+// Clear only that plugin's native inputs; its Java registration is unchanged.
+gradle.projectsEvaluated {
+    def plugin = project(':irondash_engine_context')
+    plugin.android.sourceSets.all { sourceSet -> sourceSet.jniLibs.setSrcDirs([]) }
+    plugin.tasks.matching { it.name.startsWith('cargokitCargoBuild') }.configureEach { enabled = false }
+}

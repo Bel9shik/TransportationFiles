@@ -82,7 +82,12 @@ void main() {
         await model.storage.copy([photo]);
         final clipboard = SystemClipboard.instance!;
         final imageReader = await clipboard.read();
-        expect(imageReader.canProvide(Formats.png), isTrue);
+        expect(
+          imageReader.canProvide(Formats.png),
+          isTrue,
+          reason:
+              'Items: ${imageReader.items.length}; formats: ${imageReader.getFormats(Formats.standardFormats)}',
+        );
         final imageBytes = Completer<List<int>>();
         imageReader.getFile(Formats.png, (file) async {
           try {

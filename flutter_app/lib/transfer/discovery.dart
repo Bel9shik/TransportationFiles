@@ -61,26 +61,9 @@ class Discovery {
         InternetAddress.anyIPv4,
         port,
         reuseAddress: true,
-        reusePort: !Platform.isWindows,
+        reusePort: Platform.isMacOS || Platform.isLinux,
       );
-      _receiver!.listen(
-        (event) {
-          if (event != RawSocketEvent.read) return;
-          Datagram? packet;
-          while ((packet = _receiver?.receive()) != null) {
-            final peer = parseAnnouncement(packet!.data, packet.address, id);
-            if (peer != null &&
-                (peers.length < 256 || peers.containsKey(peer.id))) {
-              peers[peer.id] = peer;
-              changed();
-            }
-          }
-        },
-        onError: (Object error) {
-          warning = 'Автопоиск: $error';
-          changed();
-        },
-      );
+      _listen(_receiver!, answer: true);
       await refresh();
       if (_closed) return;
       _timer = Timer.periodic(const Duration(seconds: 3), (_) => refresh());
@@ -88,6 +71,50 @@ class Discovery {
       warning = 'Автопоиск недоступен: ${e.message}';
       changed();
     }
+  }
+
+  final _answered = <String, DateTime>{};
+  List<int> get _announcement => utf8.encode(
+    'TF1\n$id\n$serverPort\n${name.replaceAll('\n', ' ').substring(0, name.length > 200 ? 200 : name.length)}',
+  );
+
+  void _listen(RawDatagramSocket socket, {required bool answer}) {
+    socket.listen(
+      (event) {
+        if (_closed || event != RawSocketEvent.read) return;
+        Datagram? packet;
+        while ((packet = socket.receive()) != null) {
+          final peer = parseAnnouncement(packet!.data, packet.address, id);
+          if (peer == null ||
+              (peers.length >= 256 && !peers.containsKey(peer.id))) {
+            continue;
+          }
+          peers[peer.id] = peer;
+          // Reply to the observed UDP endpoint, not to the advertised TCP port.
+          // Listening on the bound sender sockets also handles asymmetric multicast
+          // delivery and multiple receivers sharing port 4445 on macOS.
+          final lastAnswer = _answered[peer.id];
+          if (answer &&
+              (lastAnswer == null ||
+                  DateTime.now().difference(lastAnswer) >=
+                      const Duration(seconds: 3))) {
+            _answered[peer.id] = DateTime.now();
+            try {
+              socket.send(_announcement, packet.address, packet.port);
+            } on SocketException {
+              /* Periodic multicast/broadcast remains available. */
+            }
+          }
+          changed();
+        }
+      },
+      onError: (Object error) {
+        if (!_closed) {
+          warning = 'Автопоиск: $error';
+          changed();
+        }
+      },
+    );
   }
 
   Future<void> refresh() async {
@@ -144,6 +171,7 @@ class Discovery {
             } on SocketException {
               /* Broadcast is still usable if multicast fails. */
             }
+            _listen(socket, answer: false);
             _senders.add((socket, address.broadcast!));
           } on SocketException {
             /* Other interfaces may remain usable. */
@@ -151,9 +179,7 @@ class Discovery {
         }
         _signature = signature;
       }
-      final message = utf8.encode(
-        'TF1\n$id\n$serverPort\n${name.replaceAll('\n', ' ').substring(0, name.length > 200 ? 200 : name.length)}',
-      );
+      final message = _announcement;
       for (final (socket, broadcast) in _senders) {
         for (final destination in [group, broadcast]) {
           try {
@@ -170,6 +196,7 @@ class Discovery {
         (_, peer) =>
             DateTime.now().difference(peer.seen) > const Duration(seconds: 15),
       );
+      _answered.removeWhere((key, _) => !peers.containsKey(key));
       changed();
     } on SocketException catch (e) {
       warning = 'Автопоиск: ${e.message}';

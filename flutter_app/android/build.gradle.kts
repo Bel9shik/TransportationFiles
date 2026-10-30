@@ -22,3 +22,5 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+apply(from = "engine-context-16k.gradle")

@@ -134,6 +134,10 @@ jobs:
       - name: Build AOT release APK
         working-directory: flutter_app
         run: flutter build apk --release
+      - name: Verify Android 16-KB compatibility
+        run: |
+          python scripts/check_apk_alignment.py flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 4 flutter_app/build/app/outputs/flutter-apk/app-release.apk
       - uses: actions/upload-artifact@v4
         with:
           name: TransportationFiles-Android-release

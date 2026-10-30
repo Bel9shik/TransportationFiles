@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(transportfiles_android LANGUAGES CXX)
+add_library(irondash_engine_context_native SHARED engine_context.cpp)
+target_compile_features(irondash_engine_context_native PRIVATE cxx_std_17)
+target_link_libraries(irondash_engine_context_native android)
+target_link_options(irondash_engine_context_native PRIVATE "-Wl,-z,max-page-size=16384")

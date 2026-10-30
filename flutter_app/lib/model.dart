@@ -47,6 +47,11 @@ class AppModel extends ChangeNotifier {
         progress: (a, b) {
           done = a;
           total = b;
+          if (incoming) {
+            status = a == b
+                ? 'Проверка и сохранение файлов…'
+                : 'Получение файлов…';
+          }
           update();
         },
         received: (files) {
