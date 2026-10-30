@@ -61,6 +61,7 @@ class Discovery {
         InternetAddress.anyIPv4,
         port,
         reuseAddress: true,
+        reusePort: !Platform.isWindows,
       );
       _receiver!.listen(
         (event) {
@@ -81,6 +82,7 @@ class Discovery {
         },
       );
       await refresh();
+      if (_closed) return;
       _timer = Timer.periodic(const Duration(seconds: 3), (_) => refresh());
     } on SocketException catch (e) {
       warning = 'Автопоиск недоступен: ${e.message}';
@@ -131,13 +133,17 @@ class Discovery {
             }
             socket.broadcastEnabled = true;
             socket.multicastHops = 1;
-            socket.setRawOption(
-              RawSocketOption(
-                RawSocketOption.levelIPv4,
-                RawSocketOption.IPv4MulticastInterface,
-                address.rawAddress,
-              ),
-            );
+            try {
+              socket.setRawOption(
+                RawSocketOption(
+                  RawSocketOption.levelIPv4,
+                  RawSocketOption.IPv4MulticastInterface,
+                  address.rawAddress,
+                ),
+              );
+            } on SocketException {
+              /* Broadcast is still usable if multicast fails. */
+            }
             _senders.add((socket, address.broadcast!));
           } on SocketException {
             /* Other interfaces may remain usable. */

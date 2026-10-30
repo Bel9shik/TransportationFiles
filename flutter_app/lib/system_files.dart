@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'dart:isolate';
+
+import 'package:image/image.dart' as raster;
+
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
@@ -151,6 +155,25 @@ class SystemFiles {
     for (final file in files) {
       final item = DataWriterItem(suggestedName: p.basename(file.path));
       item.add(Formats.fileUri(file.uri));
+      if (files.length == 1 &&
+          {'.tif', '.tiff'}.contains(p.extension(file.path).toLowerCase())) {
+        final path = file.path;
+        final png = await Isolate.run(() async {
+          final decoder = raster.TiffDecoder();
+          final info = decoder.startDecode(await File(path).readAsBytes());
+          if (info == null || info.width * info.height > 40000000) {
+            throw const FormatException(
+              'Не удалось прочитать TIFF или изображение больше 40 Мп',
+            );
+          }
+          final image = decoder.decodeFrame(0);
+          if (image == null) {
+            throw const FormatException('Не удалось прочитать TIFF');
+          }
+          return raster.encodePng(image);
+        });
+        item.add(Formats.png(png));
+      }
       if (files.length == 1 &&
           {
             '.png',

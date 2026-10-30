@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../generated/transport_files.pbgrpc.dart' as wire;
 import 'files.dart';
 import 'publish.dart';
+import 'bounded_grpc.dart';
 
 class OfferedFile {
   final String name;
@@ -102,7 +103,7 @@ class TransferNode {
     required this.received,
     required this.failed,
   }) {
-    _server = Server.create(services: [_Pairing(this), _Receiver(this)]);
+    _server = BoundedServer(services: [_Pairing(this), _Receiver(this)]);
   }
   int get port => _server.port!;
   Future<void> start({int port = 0}) =>
@@ -339,12 +340,11 @@ String errorText(Object error) => switch (error) {
 
 class TransferSender {
   final Endpoint endpoint;
-  late final ClientChannel _channel;
+  late final ClientTransportConnectorChannel _channel;
   bool _cancelled = false;
   TransferSender(this.endpoint) {
-    _channel = ClientChannel(
-      endpoint.host,
-      port: endpoint.port,
+    _channel = ClientTransportConnectorChannel(
+      BoundedConnector(endpoint.host, endpoint.port),
       options: const ChannelOptions(
         credentials: ChannelCredentials.insecure(),
         connectionTimeout: Duration(seconds: 10),

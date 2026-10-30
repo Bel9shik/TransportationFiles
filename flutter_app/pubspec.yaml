@@ -23,8 +23,12 @@ dependencies:
   share_plus: ^12.0.2
   ffi: ^2.2.0
   unorm_dart: ^0.3.3
+  http2: ^2.3.1
+  image: ^4.12.0
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
 
@@ -38,7 +42,3 @@ flutter:
   assets:
     - assets/app-icon.png
     - assets/transfer_active.gif
-
-
-
-

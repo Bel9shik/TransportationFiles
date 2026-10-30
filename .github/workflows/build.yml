@@ -3,7 +3,7 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 concurrency:
-  group: native-${{ github.ref }}
+  group: native-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
   desktop:
@@ -13,6 +13,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    env:
+      TRANSPORT_DISCOVERY_TEST: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -39,6 +41,24 @@ jobs:
       - name: Java and Dart wire compatibility
         run: python scripts/test_flutter_interop.py
       - name: Build native release
+        working-directory: flutter_app
+        shell: bash
+        run: |
+          case '${{ runner.os }}' in
+            Linux) flutter build linux --release ;;
+            Windows) flutter build windows --release ;;
+            macOS) flutter build macos --release ;;
+          esac
+      - name: Native UI and clipboard integration (Linux)
+        if: runner.os == 'Linux'
+        working-directory: flutter_app
+        run: xvfb-run -a flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d linux --profile
+      - name: Native UI and clipboard integration (Windows, macOS)
+        if: runner.os != 'Linux'
+        working-directory: flutter_app
+        shell: bash
+        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d ${{ runner.os == 'Windows' && 'windows' || 'macos' }} --profile
+      - name: Restore distributable entry point
         working-directory: flutter_app
         shell: bash
         run: |
@@ -106,6 +126,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - working-directory: flutter_app
         run: flutter pub get --enforce-lockfile

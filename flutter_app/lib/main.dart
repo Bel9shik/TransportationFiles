@@ -22,7 +22,8 @@ void main() {
 }
 
 class TransportApp extends StatelessWidget {
-  const TransportApp({super.key});
+  final AppModel? controller;
+  const TransportApp({super.key, this.controller});
   @override
   Widget build(BuildContext context) => MaterialApp(
     title: 'TransportationFiles',
@@ -53,12 +54,13 @@ class TransportApp extends StatelessWidget {
         ),
       ),
     ),
-    home: const HomePage(),
+    home: HomePage(controller: controller),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final AppModel? controller;
+  const HomePage({super.key, this.controller});
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -71,18 +73,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    model = AppModel(
-      SystemFiles(),
-      (offer, cancelled) => showDialog<SaveChoice>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => ReceiveDialog(
-          offer: offer,
-          cancelled: cancelled,
-          storage: model.storage,
-        ),
-      ),
-    );
+    model =
+        widget.controller ??
+        AppModel(
+          SystemFiles(),
+          (offer, cancelled) => showDialog<SaveChoice>(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => ReceiveDialog(
+              offer: offer,
+              cancelled: cancelled,
+              storage: model.storage,
+            ),
+          ),
+        );
     model.addListener(_changed);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) unawaited(model.start());
@@ -319,6 +323,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       icon: const Icon(Icons.add_rounded),
       label: const Text('Изменить выбор'),
     ),
+    fileActions(model.selected.map((f) => f.file).toList()),
     const Divider(),
     Row(
       children: [
