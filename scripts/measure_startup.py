@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -17,7 +18,7 @@ args = parser.parse_args()
 assert args.runs > 0 and args.max_seconds > 0
 executable = args.executable.resolve(strict=True)
 timings = []
-for _ in range(args.runs):
+for run in range(args.runs):
     with tempfile.TemporaryDirectory(prefix='transport startup ') as directory:
         marker = Path(directory) / 'ready'
         environment = dict(os.environ, TRANSPORT_STARTUP_PROBE=str(marker))
@@ -26,8 +27,10 @@ for _ in range(args.runs):
             environment['TRANSPORT_READY_PROBE'] = str(ready)
         with (Path(directory) / 'log').open('w') as output:
             started = time.perf_counter()
+            print(f'{executable.name}: run {run + 1}, launching', file=sys.stderr, flush=True)
             process = subprocess.Popen([str(executable)], cwd=directory, env=environment,
                                        stdout=output, stderr=output)
+            print(f'{executable.name}: PID {process.pid}, waiting for frame', file=sys.stderr, flush=True)
             try:
                 while not marker.exists():
                     assert process.poll() is None, 'App exited before first frame'
@@ -44,6 +47,7 @@ for _ in range(args.runs):
                 print((Path(directory) / 'log').read_text(errors='replace'), file=__import__('sys').stderr)
                 raise
             finally:
+                print(f'{executable.name}: stopping PID {process.pid}', file=sys.stderr, flush=True)
                 if os.name == 'nt':
                     subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)

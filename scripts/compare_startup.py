@@ -18,8 +18,9 @@ paths = {
 }[system]
 results = {'platform': system, 'architecture': platform.machine(), 'metric': 'process to first painted frame; OS caches are not cleared'}
 for name, path in zip(('java', 'flutter'), paths):
+    print(f'Measuring {name} startup', file=sys.stderr, flush=True)
     output = subprocess.check_output([sys.executable, str(root / 'scripts/measure_startup.py'),
-                                      str(root / path), '--runs', '5', '--max-seconds', '15'] + (['--require-ready'] if name == 'flutter' else []), text=True)
+                                      str(root / path), '--runs', '5', '--max-seconds', '15'] + (['--require-ready'] if name == 'flutter' else []), text=True, timeout=120)
     results[name] = json.loads(output)
 results['median_ratio_flutter_to_java'] = round(results['flutter']['median_seconds'] / results['java']['median_seconds'], 3)
 text = json.dumps(results, ensure_ascii=False, indent=2)

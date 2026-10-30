@@ -75,9 +75,11 @@ jobs:
         shell: bash
         run: ./gradlew :core:test :app:packageApp
       - name: Compare packaged startup (Linux)
+        timeout-minutes: 3
         if: runner.os == 'Linux'
         run: xvfb-run -a python scripts/compare_startup.py
       - name: Compare packaged startup (Windows, macOS)
+        timeout-minutes: 3
         if: runner.os != 'Linux'
         run: python scripts/compare_startup.py
       - name: Package application
