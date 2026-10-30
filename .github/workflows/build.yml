@@ -19,7 +19,6 @@ jobs:
     timeout-minutes: 40
     env:
       TRANSPORT_DISCOVERY_TEST: 'true'
-      TRANSPORT_DISCOVERY_TRACE: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

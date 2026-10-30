@@ -40,12 +40,6 @@ Peer? parseAnnouncement(List<int> bytes, InternetAddress source, String ownId) {
 }
 
 class Discovery {
-  void _trace(String message) {
-    if (Platform.environment['TRANSPORT_DISCOVERY_TRACE'] == 'true') {
-      stderr.writeln('[DEBUG-udp] $name: $message');
-    }
-  }
-
   static const port = 4445;
   static final group = InternetAddress('239.255.44.45');
   final int serverPort;
@@ -54,34 +48,21 @@ class Discovery {
   final void Function() changed;
   final peers = <String, Peer>{};
   final addresses = <String>[];
-  final _senders = <(RawDatagramSocket, InternetAddress)>[];
+  final _senders = <(RawDatagramSocket, InternetAddress, InterfaceAddress)>[];
+  final _answered = <String, DateTime>{};
   RawDatagramSocket? _receiver;
   Timer? _timer;
   bool _refreshing = false, _closed = false;
-  String? warning;
+  String? _signature, warning;
   Discovery(this.serverPort, this.name, this.changed);
 
   Future<void> start() async {
-    try {
-      _receiver = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        port,
-        reuseAddress: true,
-        reusePort: Platform.isMacOS || Platform.isLinux,
-      );
-      _trace('receiver bound ${_receiver!.address.address}:${_receiver!.port}');
-      _listen(_receiver!, answer: true);
-      await refresh();
-      if (_closed) return;
+    await refresh();
+    if (!_closed) {
       _timer = Timer.periodic(const Duration(seconds: 3), (_) => refresh());
-    } on SocketException catch (e) {
-      _trace('start error $e');
-      warning = 'Автопоиск недоступен: ${e.message}';
-      changed();
     }
   }
 
-  final _answered = <String, DateTime>{};
   List<int> get _announcement => utf8.encode(
     'TF1\n$id\n$serverPort\n${name.replaceAll('\n', ' ').substring(0, name.length > 200 ? 200 : name.length)}',
   );
@@ -92,44 +73,45 @@ class Discovery {
         if (_closed || event != RawSocketEvent.read) return;
         Datagram? packet;
         while ((packet = socket.receive()) != null) {
-          _trace(
-            'receive ${socket.port} from ${packet!.address.address}:${packet.port} ${utf8.decode(packet.data, allowMalformed: true).replaceAll('\n', '/')}',
-          );
-          final peer = parseAnnouncement(packet.data, packet.address, id);
+          final peer = parseAnnouncement(packet!.data, packet.address, id);
           if (peer == null ||
               (peers.length >= 256 && !peers.containsKey(peer.id))) {
             continue;
           }
           peers[peer.id] = peer;
-          // Reply to the observed UDP endpoint, not to the advertised TCP port.
-          // Listening on the bound sender sockets also handles asymmetric multicast
-          // delivery and multiple receivers sharing port 4445 on macOS.
           final lastAnswer = _answered[peer.id];
           if (answer &&
               (lastAnswer == null ||
                   DateTime.now().difference(lastAnswer) >=
                       const Duration(seconds: 3))) {
             _answered[peer.id] = DateTime.now();
-            try {
-              final sent = socket.send(
-                _announcement,
-                packet.address,
-                packet.port,
-              );
-              _trace(
-                'reply ${socket.port} to ${packet.address.address}:${packet.port} bytes=$sent',
-              );
-            } on SocketException catch (e) {
-              _trace('reply error $e');
-              /* Periodic multicast/broadcast remains available. */
+            // A failed send closes a Dart UDP socket. Keep replies off the
+            // shared receiver and bind their source to the peer's LAN subnet.
+            for (final (sender, destination, address) in _senders) {
+              final shift = 32 - address.prefixLength;
+              int ipv4(InternetAddress value) =>
+                  value.rawAddress.fold(0, (n, b) => (n << 8) | b);
+              if (destination == group ||
+                  ipv4(address) >> shift != ipv4(packet.address) >> shift) {
+                continue;
+              }
+              try {
+                sender.send(_announcement, packet.address, packet.port);
+              } on SocketException {
+                /* Periodic advertisements can recover. */
+              }
+              break;
             }
           }
           changed();
         }
       },
       onError: (Object error) {
-        _trace('listener error ${socket.port} $error');
-        if (!_closed) {
+        if (_closed) return;
+        if (identical(_receiver, socket)) _receiver = null;
+        _senders.removeWhere((entry) => identical(entry.$1, socket));
+        _signature = null;
+        if (_receiver == null || _senders.isEmpty) {
           warning = 'Автопоиск: $error';
           changed();
         }
@@ -141,13 +123,26 @@ class Discovery {
     if (_closed || _refreshing) return;
     _refreshing = true;
     try {
+      if (_receiver == null) {
+        final socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          port,
+          reuseAddress: true,
+          reusePort: Platform.isMacOS || Platform.isLinux,
+        );
+        if (_closed) {
+          socket.close();
+          return;
+        }
+        _receiver = socket;
+        _listen(socket, answer: true);
+        _signature = null;
+      }
       final interfaces = await NetworkInterface.list(
         type: InternetAddressType.IPv4,
       );
       final candidates = <(NetworkInterface, InterfaceAddress)>[
         for (final nic in interfaces)
-          // Point-to-point tunnels have no broadcast address. Skip common VPN
-          // names too; advertisements must use the physical LAN source IP.
           if (!RegExp(
             r'^(utun|tun|tap|ppp|wg|tailscale)',
             caseSensitive: false,
@@ -157,9 +152,11 @@ class Discovery {
                 (nic, address),
       ];
       final signature = candidates
-          .map((e) => '${e.$1.index}/${e.$2.address}/${e.$2.broadcast}')
+          .map(
+            (e) =>
+                '${e.$1.index}/${e.$2.address}/${e.$2.prefixLength}/${e.$2.broadcast}',
+          )
           .join(',');
-      _trace('interfaces $signature');
       if (signature != _signature) {
         for (final sender in _senders) {
           sender.$1.close();
@@ -170,50 +167,45 @@ class Discovery {
           addresses.add('${address.address}:$serverPort');
           try {
             _receiver?.joinMulticast(group, nic);
-          } on SocketException catch (e) {
-            _trace('join $e');
+          } on SocketException {
             /* May already be joined. */
           }
-          try {
-            final socket = await RawDatagramSocket.bind(address, 0);
-            _trace('sender bound ${socket.address.address}:${socket.port}');
-            if (_closed) {
-              socket.close();
-              break;
-            }
-            socket.broadcastEnabled = true;
-            socket.multicastHops = 1;
+          // Multicast route errors must not disable directed broadcast.
+          for (final destination in [address.broadcast!, group]) {
+            RawDatagramSocket? socket;
             try {
-              socket.setRawOption(
-                RawSocketOption(
-                  RawSocketOption.levelIPv4,
-                  RawSocketOption.IPv4MulticastInterface,
-                  address.rawAddress,
-                ),
-              );
+              socket = await RawDatagramSocket.bind(address, 0);
+              if (_closed) {
+                socket.close();
+                return;
+              }
+              if (destination == group) {
+                socket.multicastHops = 1;
+                socket.setRawOption(
+                  RawSocketOption(
+                    RawSocketOption.levelIPv4,
+                    RawSocketOption.IPv4MulticastInterface,
+                    address.rawAddress,
+                  ),
+                );
+              } else {
+                socket.broadcastEnabled = true;
+              }
+              _listen(socket, answer: false);
+              _senders.add((socket, destination, address));
             } on SocketException {
-              /* Broadcast is still usable if multicast fails. */
+              socket?.close();
             }
-            _listen(socket, answer: false);
-            _senders.add((socket, address.broadcast!));
-          } on SocketException {
-            /* Other interfaces may remain usable. */
           }
         }
         _signature = signature;
       }
       final message = _announcement;
-      for (final (socket, broadcast) in _senders) {
-        for (final destination in [group, broadcast]) {
-          try {
-            final sent = socket.send(message, destination, port);
-            _trace(
-              'send ${socket.port} to ${destination.address}:$port bytes=$sent',
-            );
-          } on SocketException catch (e) {
-            _trace('send error $e');
-            /* VPN can block a route independently. */
-          }
+      for (final (socket, destination, _) in _senders) {
+        try {
+          socket.send(message, destination, port);
+        } on SocketException {
+          _signature = null;
         }
       }
       warning = _senders.isEmpty
@@ -232,8 +224,6 @@ class Discovery {
       _refreshing = false;
     }
   }
-
-  String? _signature;
 
   void close() {
     _closed = true;
