@@ -74,6 +74,7 @@ void main() {
         expect(model.success, isTrue, reason: model.status);
         expect(await model.received.single.readAsBytes(), bytes);
         expect(find.text('Приём завершён'), findsOneWidget);
+        debugPrint('Native smoke: received file verified; copying PNG');
 
         final picture = raster.Image(width: 2, height: 2)
           ..setPixelRgb(0, 0, 255, 0, 0);
@@ -106,6 +107,7 @@ void main() {
         expect(decoded?.width, 2);
         expect(decoded?.height, 2);
         expect(decoded?.getPixel(0, 0).r, 255);
+        debugPrint('Native smoke: PNG pixels verified; copying file list');
 
         await model.storage.copy([source, photo]);
         final filesReader = await clipboard.read();
@@ -116,6 +118,7 @@ void main() {
           );
           expect(values.toSet(), {source.uri, photo.uri});
         }
+        debugPrint('Native smoke: file list verified');
         // This runs only in a disposable CI runner / isolated Android test app.
         await clipboard.write([
           DataWriterItem()

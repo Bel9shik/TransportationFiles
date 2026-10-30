@@ -3,8 +3,6 @@ import 'dart:isolate';
 
 import 'package:image/image.dart' as raster;
 
-import 'dart:ui' as ui;
-
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
@@ -156,25 +154,6 @@ class SystemFiles {
       final item = DataWriterItem(suggestedName: p.basename(file.path));
       item.add(Formats.fileUri(file.uri));
       if (files.length == 1 &&
-          {'.tif', '.tiff'}.contains(p.extension(file.path).toLowerCase())) {
-        final path = file.path;
-        final png = await Isolate.run(() async {
-          final decoder = raster.TiffDecoder();
-          final info = decoder.startDecode(await File(path).readAsBytes());
-          if (info == null || info.width * info.height > 40000000) {
-            throw const FormatException(
-              'Не удалось прочитать TIFF или изображение больше 40 Мп',
-            );
-          }
-          final image = decoder.decodeFrame(0);
-          if (image == null) {
-            throw const FormatException('Не удалось прочитать TIFF');
-          }
-          return raster.encodePng(image);
-        });
-        item.add(Formats.png(png));
-      }
-      if (files.length == 1 &&
           {
             '.png',
             '.jpg',
@@ -182,34 +161,33 @@ class SystemFiles {
             '.gif',
             '.bmp',
             '.webp',
+            '.tif',
+            '.tiff',
           }.contains(p.extension(file.path).toLowerCase())) {
-        final buffer = await ui.ImmutableBuffer.fromFilePath(file.path);
-        ui.ImageDescriptor? descriptor;
-        ui.Codec? codec;
-        ui.Image? image;
-        try {
-          descriptor = await ui.ImageDescriptor.encoded(buffer);
-          if (descriptor.width * descriptor.height > 40000000) {
-            throw const FormatException(
-              'Изображение больше 40 Мп. Используйте «Поделиться» или сохраните файл.',
-            );
-          }
-          codec = await descriptor.instantiateCodec();
-          image = (await codec.getNextFrame()).image;
-          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-          if (bytes == null) {
-            throw const FormatException('Не удалось скопировать изображение');
-          }
-          item.add(Formats.png(bytes.buffer.asUint8List()));
-        } finally {
-          image?.dispose();
-          codec?.dispose();
-          descriptor?.dispose();
-          buffer.dispose();
-        }
+        item.add(Formats.png(await clipboardImage(file)));
       }
       items.add(item);
     }
     await clipboard.write(items);
   }
+}
+
+// Clipboard conversion must not require a working GPU (notably Intel Metal).
+Future<Uint8List> clipboardImage(File file) {
+  final path = file.path;
+  return Isolate.run(() async {
+    final bytes = await File(path).readAsBytes();
+    final decoder = raster.findDecoderForData(bytes);
+    final info = decoder?.startDecode(bytes);
+    if (info == null || info.width * info.height > 40000000) {
+      throw const FormatException(
+        'Не удалось прочитать изображение или оно больше 40 Мп',
+      );
+    }
+    final image = decoder!.decodeFrame(0);
+    if (image == null) {
+      throw const FormatException('Не удалось прочитать изображение');
+    }
+    return raster.encodePng(raster.bakeOrientation(image));
+  });
 }
