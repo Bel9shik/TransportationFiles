@@ -10,7 +10,10 @@ void main() {
     try {
       await first.start();
       await second.start();
+      expect(first.warning, isNull);
+      expect(second.warning, isNull);
       expect(first.addresses, isNotEmpty, reason: first.warning);
+      expect(second.addresses, isNotEmpty, reason: second.warning);
       for (var i = 0; i < 50; i++) {
         await first.refresh();
         await second.refresh();

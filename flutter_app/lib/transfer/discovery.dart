@@ -40,6 +40,12 @@ Peer? parseAnnouncement(List<int> bytes, InternetAddress source, String ownId) {
 }
 
 class Discovery {
+  void _trace(String message) {
+    if (Platform.environment['TRANSPORT_DISCOVERY_TRACE'] == 'true') {
+      stderr.writeln('[DEBUG-udp] $name: $message');
+    }
+  }
+
   static const port = 4445;
   static final group = InternetAddress('239.255.44.45');
   final int serverPort;
@@ -63,11 +69,13 @@ class Discovery {
         reuseAddress: true,
         reusePort: Platform.isMacOS || Platform.isLinux,
       );
+      _trace('receiver bound ${_receiver!.address.address}:${_receiver!.port}');
       _listen(_receiver!, answer: true);
       await refresh();
       if (_closed) return;
       _timer = Timer.periodic(const Duration(seconds: 3), (_) => refresh());
     } on SocketException catch (e) {
+      _trace('start error $e');
       warning = 'Автопоиск недоступен: ${e.message}';
       changed();
     }
@@ -84,7 +92,10 @@ class Discovery {
         if (_closed || event != RawSocketEvent.read) return;
         Datagram? packet;
         while ((packet = socket.receive()) != null) {
-          final peer = parseAnnouncement(packet!.data, packet.address, id);
+          _trace(
+            'receive ${socket.port} from ${packet!.address.address}:${packet.port} ${utf8.decode(packet.data, allowMalformed: true).replaceAll('\n', '/')}',
+          );
+          final peer = parseAnnouncement(packet.data, packet.address, id);
           if (peer == null ||
               (peers.length >= 256 && !peers.containsKey(peer.id))) {
             continue;
@@ -100,8 +111,16 @@ class Discovery {
                       const Duration(seconds: 3))) {
             _answered[peer.id] = DateTime.now();
             try {
-              socket.send(_announcement, packet.address, packet.port);
-            } on SocketException {
+              final sent = socket.send(
+                _announcement,
+                packet.address,
+                packet.port,
+              );
+              _trace(
+                'reply ${socket.port} to ${packet.address.address}:${packet.port} bytes=$sent',
+              );
+            } on SocketException catch (e) {
+              _trace('reply error $e');
               /* Periodic multicast/broadcast remains available. */
             }
           }
@@ -109,6 +128,7 @@ class Discovery {
         }
       },
       onError: (Object error) {
+        _trace('listener error ${socket.port} $error');
         if (!_closed) {
           warning = 'Автопоиск: $error';
           changed();
@@ -139,6 +159,7 @@ class Discovery {
       final signature = candidates
           .map((e) => '${e.$1.index}/${e.$2.address}/${e.$2.broadcast}')
           .join(',');
+      _trace('interfaces $signature');
       if (signature != _signature) {
         for (final sender in _senders) {
           sender.$1.close();
@@ -149,11 +170,13 @@ class Discovery {
           addresses.add('${address.address}:$serverPort');
           try {
             _receiver?.joinMulticast(group, nic);
-          } on SocketException {
+          } on SocketException catch (e) {
+            _trace('join $e');
             /* May already be joined. */
           }
           try {
             final socket = await RawDatagramSocket.bind(address, 0);
+            _trace('sender bound ${socket.address.address}:${socket.port}');
             if (_closed) {
               socket.close();
               break;
@@ -183,8 +206,12 @@ class Discovery {
       for (final (socket, broadcast) in _senders) {
         for (final destination in [group, broadcast]) {
           try {
-            socket.send(message, destination, port);
-          } on SocketException {
+            final sent = socket.send(message, destination, port);
+            _trace(
+              'send ${socket.port} to ${destination.address}:$port bytes=$sent',
+            );
+          } on SocketException catch (e) {
+            _trace('send error $e');
             /* VPN can block a route independently. */
           }
         }
