@@ -1,7 +1,10 @@
-name: Cross-platform build
+name: Native cross-platform build
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   desktop:
     strategy:
@@ -9,89 +12,107 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    env:
-      TRANSPORT_DISCOVERY_TEST: 'true'
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Linux GUI dependencies
+      - name: Linux native dependencies
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-0 xvfb
-      - name: Test and package (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run -a ./gradlew :core:test :app:test :app:distZip :app:packageApp
-      - name: Test and package (Windows, macOS)
-        if: runner.os != 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev xvfb
+      - name: Resolve locked dependencies
+        working-directory: flutter_app
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze and test
+        working-directory: flutter_app
+        run: |
+          flutter analyze
+          flutter test
+      - name: Java and Dart wire compatibility
+        run: python scripts/test_flutter_interop.py
+      - name: Build native release
+        working-directory: flutter_app
         shell: bash
-        run: ./gradlew :core:test :app:test :app:distZip :app:packageApp
-      - name: Launch packaged application (Linux)
-        if: runner.os == 'Linux'
-        run: xvfb-run -a python scripts/smoke_package.py
-      - name: Launch packaged application (Windows, macOS)
-        if: runner.os != 'Linux'
+        run: |
+          case '${{ runner.os }}' in
+            Linux) flutter build linux --release ;;
+            Windows) flutter build windows --release ;;
+            macOS) flutter build macos --release ;;
+          esac
+      - name: Build Java baseline
         shell: bash
-        run: python scripts/smoke_package.py
-      - name: Build Windows EXE installer
-        if: runner.os == 'Windows'
-        run: ./gradlew.bat :app:packageWindowsInstaller
-      - name: Install and launch Windows application
+        run: ./gradlew :core:test :app:packageApp
+      - name: Compare packaged startup (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a python scripts/compare_startup.py
+      - name: Compare packaged startup (Windows, macOS)
+        if: runner.os != 'Linux'
+        run: python scripts/compare_startup.py
+      - name: Package application
+        shell: bash
+        run: |
+          case '${{ runner.os }}' in
+            Linux) tar -czf TransportationFiles-Linux-${{ runner.arch }}.tar.gz -C flutter_app/build/linux/x64/release/bundle . ;;
+            Windows) 7z a TransportationFiles-Windows-X64.zip ./flutter_app/build/windows/x64/runner/Release/* ;;
+            macOS) tar -czf TransportationFiles-macOS-${{ runner.arch }}.tar.gz -C flutter_app/build/macos/Build/Products/Release TransportationFiles.app ;;
+          esac
+      - name: Windows single EXE installer
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $installer = @(Get-ChildItem app/build/installer/*.exe)
-          if ($installer.Count -ne 1) { throw 'Expected one EXE installer' }
-          $log = Join-Path $env:RUNNER_TEMP 'TransportationFiles-install.log'
-          $process = Start-Process $installer[0].FullName -ArgumentList '/quiet', '/norestart', '/L*v', "`"$log`"" -Wait -PassThru
-          if ($process.ExitCode -notin 0, 3010) {
-            Get-Content $log
-            throw "Installer failed: $($process.ExitCode)"
-          }
-          python scripts/smoke_package.py $env:LOCALAPPDATA
-          if ($LASTEXITCODE -ne 0) { throw 'Installed application failed to launch' }
-          $menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'TransportationFiles/TransportationFiles.lnk'
-          $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) 'TransportationFiles.lnk'
-          if (!(Test-Path $menu) -or !(Test-Path $desktop)) { throw 'Application shortcuts missing' }
-          Move-Item $installer[0].FullName app/build/installer/TransportationFiles-Windows-X64-Setup.exe
-      - uses: actions/upload-artifact@v4
-        if: runner.os == 'Windows'
-        with:
-          name: TransportationFiles-Windows-X64-Setup
-          path: app/build/installer/*-Setup.exe
-      - name: Preserve executable permissions in the app image
-        shell: bash
-        run: tar -czf TransportationFiles-${{ runner.os }}-${{ runner.arch }}.tar.gz -C app/build/package .
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" flutter_app/packaging/windows.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
+          $installer = (Get-Item flutter_app/build/installer/*-Setup.exe).FullName
+          $process = Start-Process $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installer failed' }
+          python scripts/measure_startup.py "$env:LOCALAPPDATA/TransportationFiles-Native/transportfiles.exe" --runs 1 --max-seconds 15 --require-ready
+          if ($LASTEXITCODE -ne 0) { throw 'Installed application failed to start' }
+          Copy-Item $installer .
       - uses: actions/upload-artifact@v4
         with:
-          name: TransportationFiles-${{ runner.os }}-${{ runner.arch }}
-          path: TransportationFiles-*.tar.gz
+          name: TransportationFiles-Native-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            TransportationFiles-*.tar.gz
+            TransportationFiles-*.zip
+            TransportationFiles-*-Setup.exe
+            startup-results.json
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: desktop-test-reports-${{ runner.os }}-${{ runner.arch }}
-          path: '**/build/reports/tests/'
+          name: native-diagnostics-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            **/build/reports/tests/
+            startup-results.json
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: |
-            17
-            21
+          java-version: '21'
       - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
-      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - run: ./gradlew -Pandroid=true :android:assembleDebug :android:lintDebug
+      - working-directory: flutter_app
+        run: flutter pub get --enforce-lockfile
+      - name: Build AOT release APK
+        working-directory: flutter_app
+        run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
-          name: TransportationFiles-Android-debug
-          path: android/build/outputs/apk/debug/*.apk
+          name: TransportationFiles-Android-release
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
