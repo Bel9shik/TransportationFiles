@@ -34,9 +34,9 @@ void main() {
       }
 
       await until(() => model.ready);
-      final root = await (await getTemporaryDirectory()).createTemp(
-        'native-smoke-',
-      );
+      final temporary = await getTemporaryDirectory();
+      await temporary.create(recursive: true);
+      final root = await temporary.createTemp('native-smoke-');
       final oldFolder = model.storage.folder;
       try {
         if (!Platform.isAndroid) await model.changeFolder(root.path);
