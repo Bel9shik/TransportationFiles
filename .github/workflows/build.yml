@@ -92,6 +92,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          foreach ($dll in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+            if (!(Test-Path "flutter_app/build/windows/x64/runner/Release/$dll")) {
+              throw "Missing bundled compiler runtime: $dll"
+            }
+          }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" flutter_app/packaging/windows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
           $installer = (Get-Item flutter_app/build/installer/*-Setup.exe).FullName
