@@ -86,6 +86,54 @@ Stream<List<int>> coalesceWindowUpdates(Stream<List<int>> input) {
   return output.stream;
 }
 
+// FrameWriter emits each 16-KiB DATA frame separately, even when they belong
+// to one gRPC block. Batch synchronous writes into a single socket write while
+// retaining the byte order and propagating socket backpressure.
+Stream<List<int>> coalesceSocketWrites(Stream<List<int>> input) {
+  late StreamController<List<int>> output;
+  late StreamSubscription<List<int>> subscription;
+  final bytes = BytesBuilder(copy: false);
+  var scheduled = false, cancelled = false;
+  void flush() {
+    scheduled = false;
+    if (cancelled || output.isClosed || bytes.isEmpty) return;
+    output.add(bytes.takeBytes());
+  }
+
+  output = StreamController<List<int>>(
+    sync: true,
+    onListen: () {
+      subscription = input.listen(
+        (data) {
+          bytes.add(data);
+          if (bytes.length >= 64 * 1024) {
+            flush();
+          } else if (!scheduled) {
+            scheduled = true;
+            scheduleMicrotask(flush);
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          flush();
+          output.addError(error, stack);
+        },
+        onDone: () {
+          flush();
+          output.close();
+        },
+      );
+    },
+    onPause: () => subscription.pause(),
+    onResume: () => subscription.resume(),
+    onCancel: () {
+      cancelled = true;
+      bytes.clear();
+      return subscription.cancel();
+    },
+  );
+  return output.stream;
+}
+
 // http2's BufferedSink uses addStream; retaining Socket.addStream preserves
 // backpressure all the way to its HTTP/2 queues instead of buffering the file.
 class WindowUpdateSocketSink implements StreamSink<List<int>> {
@@ -98,7 +146,7 @@ class WindowUpdateSocketSink implements StreamSink<List<int>> {
       socket.addError(error, stackTrace);
   @override
   Future<void> addStream(Stream<List<int>> stream) =>
-      socket.addStream(coalesceWindowUpdates(stream));
+      socket.addStream(coalesceSocketWrites(coalesceWindowUpdates(stream)));
   @override
   Future<void> close() async {
     await socket.close();

@@ -6,12 +6,19 @@ import tempfile
 import time
 
 root = Path(__file__).resolve().parent.parent
+gradle = 'gradlew.bat' if os.name == 'nt' else './gradlew'
+# Compile both peers before starting their protocol deadlines. In particular,
+# dart run can spend minutes building native assets on a fresh CI runner.
+subprocess.run([gradle, ':core:testClasses'], cwd=root, check=True, timeout=600)
+subprocess.run(['dart', 'build', 'cli', '--target=tool/interop.dart', '--output=build/interop'],
+               cwd=root / 'flutter_app', check=True, timeout=600)
+dart_peer = root / 'flutter_app/build/interop/bundle/bin' / ('interop.exe' if os.name == 'nt' else 'interop')
 with tempfile.TemporaryDirectory(prefix='transport-interop-') as temp:
     processes = []
     handles = []
     try:
-        commands = [(['dart', 'run', 'tool/interop.dart', temp], root / 'flutter_app'),
-                    (['gradlew.bat' if os.name == 'nt' else './gradlew', ':core:flutterInterop', f'--args="{temp}"'], root)]
+        commands = [([str(dart_peer), temp], root / 'flutter_app'),
+                    ([gradle, ':core:flutterInterop', f'--args="{temp}"'], root)]
         for index, (command, cwd) in enumerate(commands):
             log = open(Path(temp) / f'{index}.log', 'w')
             handles.append(log)

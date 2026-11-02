@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:grpc/grpc.dart';
@@ -106,8 +107,18 @@ class TransferNode {
     _server = BoundedServer(services: [_Pairing(this), _Receiver(this)]);
   }
   int get port => _server.port!;
-  Future<void> start({int port = 0}) =>
-      _server.bind(address: InternetAddress.anyIPv4, port: port);
+  Future<void> start({int port = 0}) async {
+    // AppModel starts after the first frame. Load and verify the native backend
+    // before advertising readiness, rather than on the first incoming file.
+    final hash = StreamingDigest();
+    try {
+      await hash.finish();
+    } finally {
+      await hash.close();
+    }
+    await _server.bind(address: InternetAddress.anyIPv4, port: port);
+  }
+
   void cancelIncoming() {
     final session = _current;
     session?.cancel();
@@ -184,6 +195,14 @@ class TransferNode {
     RandomAccessFile? output;
     var index = 0, count = 0, completed = 0;
     var hash = StreamingDigest();
+    final buffered = BytesBuilder(copy: false);
+    Future<void> flushBuffered() async {
+      if (buffered.isEmpty) return;
+      final bytes = buffered.takeBytes();
+      await output!.writeFrom(bytes);
+      await hash.add(bytes);
+    }
+
     final iterator = StreamIterator(chunks);
     final deadline = DateTime.now().add(const Duration(minutes: 10));
     try {
@@ -227,6 +246,7 @@ class TransferNode {
           throw const FormatException('Размер файла превышен');
         }
         if (chunk.sha256.isNotEmpty) {
+          await flushBuffered();
           final digest = await hash.finish();
           if (chunk.content.isNotEmpty ||
               chunk.sha256.length != 32 ||
@@ -244,8 +264,10 @@ class TransferNode {
           index++;
           hash = StreamingDigest();
         } else {
-          await output.writeFrom(chunk.content);
-          await hash.add(chunk.content);
+          // Keep network messages bounded at 64 KiB, but amortize disk/FFI
+          // scheduling over at most 1 MiB plus one incoming chunk.
+          buffered.add(chunk.content);
+          if (buffered.length >= 1024 * 1024) await flushBuffered();
           count += chunk.content.length;
           progress(completed + count, session.offer.size);
         }

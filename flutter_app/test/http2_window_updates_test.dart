@@ -19,6 +19,50 @@ int streamId(List<int> bytes) =>
     ByteData.sublistView(Uint8List.fromList(bytes)).getUint32(5);
 
 void main() {
+  test(
+    'synchronous HTTP/2 writes are batched without reordering bytes',
+    () async {
+      final source = StreamController<List<int>>(sync: true);
+      final result = coalesceSocketWrites(source.stream).toList();
+      source.add([1, 2]);
+      source.add([3]);
+      source.add([4, 5]);
+      await source.close();
+      expect(await result, [
+        [1, 2, 3, 4, 5],
+      ]);
+    },
+  );
+
+  test(
+    'socket batching flushes at the byte bound and propagates pause/cancel',
+    () async {
+      var paused = false, cancelled = false;
+      final source = StreamController<List<int>>(
+        sync: true,
+        onPause: () => paused = true,
+        onResume: () => paused = false,
+        onCancel: () => cancelled = true,
+      );
+      final sizes = <int>[];
+      final subscription = coalesceSocketWrites(source.stream)
+          .listen((b) => sizes.add(b.length));
+      for (var i = 0; i < 4; i++) {
+        source.add(Uint8List(16 * 1024));
+      }
+      expect(sizes, [64 * 1024]);
+      subscription.pause();
+      expect(paused, isTrue);
+      subscription.resume();
+      source.add([1]);
+      await subscription.cancel();
+      await Future<void>.delayed(Duration.zero);
+      expect(cancelled, isTrue);
+      expect(sizes, [64 * 1024]);
+      await source.close();
+    },
+  );
+
   test('large updates cannot overflow the HTTP/2 31-bit increment', () async {
     final result = await coalesceWindowUpdates(
       Stream.fromIterable([update(0, 71), update(0, 0x7fffffff)]),
