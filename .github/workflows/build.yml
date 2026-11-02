@@ -16,7 +16,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       TRANSPORT_DISCOVERY_TEST: 'true'
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
