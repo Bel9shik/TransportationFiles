@@ -7,7 +7,6 @@ import 'package:grpc/grpc.dart';
 import 'package:http2/transport.dart' as h2;
 
 import 'http2_window_updates.dart';
-import 'http2_data_batching.dart';
 
 // grpc-dart 5.2 allocates the declared message length before deserializing it.
 // Validate the five-byte envelope before forwarding it to that decoder, on
@@ -109,9 +108,7 @@ abstract class _Stream extends h2.TransportStream {
   Stream<h2.StreamMessage> get incomingMessages =>
       boundedMessages(inner.incomingMessages);
   @override
-  late final StreamSink<h2.StreamMessage> outgoingMessages = Platform.isWindows
-      ? BatchedDataSink(inner.outgoingMessages)
-      : inner.outgoingMessages;
+  StreamSink<h2.StreamMessage> get outgoingMessages => inner.outgoingMessages;
   @override
   set onTerminated(void Function(int?) value) {
     inner.onTerminated = value;
@@ -147,7 +144,7 @@ class BoundedServer extends Server {
     final listener = await ServerSocket.bind(address, port);
     _listener = listener;
     listener.listen((socket) {
-      socket.setOption(SocketOption.tcpNoDelay, true);
+      _configureSocket(socket);
       InternetAddress? remoteAddress;
       try {
         remoteAddress = socket.remoteAddress;
@@ -160,8 +157,8 @@ class BoundedServer extends Server {
           WindowUpdateSocketSink(socket),
           settings: const h2.ServerSettings(
             concurrentStreamLimit: 1000,
-            streamWindowSize: 16 * 1024 * 1024,
-            connectionWindowSize: 32 * 1024 * 1024,
+            streamWindowSize: 1024 * 1024,
+            connectionWindowSize: 4 * 1024 * 1024,
             // A 64-KiB file block also carries protobuf/gRPC headers.
             maxFrameSize: 128 * 1024,
           ),
@@ -210,14 +207,14 @@ class BoundedConnector implements ClientTransportConnector {
       throw const GrpcError.cancelled();
     }
     _socket = socket;
-    socket.setOption(SocketOption.tcpNoDelay, true);
+    _configureSocket(socket);
     return _ClientConnection(
       h2.ClientTransportConnection.viaStreams(
         socket,
         WindowUpdateSocketSink(socket),
         settings: const h2.ClientSettings(
-          streamWindowSize: 16 * 1024 * 1024,
-          connectionWindowSize: 32 * 1024 * 1024,
+          streamWindowSize: 1024 * 1024,
+          connectionWindowSize: 4 * 1024 * 1024,
           maxFrameSize: 128 * 1024,
         ),
       ),
@@ -234,4 +231,31 @@ class BoundedConnector implements ClientTransportConnector {
 
   @override
   String get authority => '${host.contains(':') ? '[$host]' : host}:$port';
+}
+
+const _sendBuffer = 1024 * 1024;
+const _receiveBuffer = 1024 * 1024;
+void _configureSocket(Socket socket) {
+  socket.setOption(SocketOption.tcpNoDelay, true);
+  if (!Platform.isWindows) return;
+  if (_sendBuffer > 0)
+    socket.setRawOption(
+      RawSocketOption.fromInt(RawSocketOption.levelSocket, 0x1001, _sendBuffer),
+    );
+  if (_receiveBuffer > 0)
+    socket.setRawOption(
+      RawSocketOption.fromInt(
+        RawSocketOption.levelSocket,
+        0x1002,
+        _receiveBuffer,
+      ),
+    );
+  int read(int option) => ByteData.sublistView(
+    socket.getRawOption(
+      RawSocketOption.fromInt(RawSocketOption.levelSocket, option, 0),
+    ),
+  ).getInt32(0, Endian.host);
+  stderr.writeln(
+    'Socket buffers: send=${read(0x1001)}, receive=${read(0x1002)}',
+  );
 }
