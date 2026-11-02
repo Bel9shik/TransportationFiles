@@ -1,0 +1,28 @@
+name: macOS Intel repeated startup probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  startup:
+    runs-on: macos-15-intel
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download previously validated Intel package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 41418535620 -n TransportationFiles-Native-macOS-X64 -D probe-artifact
+      - name: Repeated startup with native thread sampling on failure
+        run: |
+          mkdir probe-package
+          tar -xzf probe-artifact/TransportationFiles-macOS-X64.tar.gz -C probe-package
+          python3 scripts/measure_startup.py "$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles" --runs 20 --max-seconds 15 --require-ready --diagnostics-dir startup-diagnostics > probe-startup.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-intel-startup-probe
+          path: |
+            probe-startup.json
+            startup-diagnostics/

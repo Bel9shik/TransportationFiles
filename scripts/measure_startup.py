@@ -14,6 +14,7 @@ parser.add_argument('executable', type=Path)
 parser.add_argument('--require-ready', action='store_true')
 parser.add_argument('--runs', type=int, default=3)
 parser.add_argument('--max-seconds', type=float, default=10)
+parser.add_argument('--diagnostics-dir', type=Path)
 args = parser.parse_args()
 assert args.runs > 0 and args.max_seconds > 0
 executable = args.executable.resolve(strict=True)
@@ -44,7 +45,25 @@ for run in range(args.runs):
                         time.sleep(0.01)
             except BaseException:
                 output.flush()
-                print((Path(directory) / 'log').read_text(errors='replace'), file=__import__('sys').stderr)
+                log = (Path(directory) / 'log').read_text(errors='replace')
+                print(log, file=sys.stderr)
+                print(f'Completed frame measurements: {timings}; frame={marker.exists()}, network={ready.exists()}',
+                      file=sys.stderr, flush=True)
+                if args.diagnostics_dir:
+                    args.diagnostics_dir.mkdir(parents=True, exist_ok=True)
+                    (args.diagnostics_dir / f'run-{run + 1}.app.log').write_text(log)
+                    if sys.platform == 'darwin' and process.poll() is None:
+                        # Capture the blocked native thread before terminating it.
+                        # Sampling is diagnostic only and never changes the deadline.
+                        try:
+                            sampled = subprocess.run(
+                                ['/usr/bin/sample', str(process.pid), '2', '-file',
+                                 str(args.diagnostics_dir / f'run-{run + 1}.sample.txt')],
+                                capture_output=True, text=True, timeout=8,
+                            )
+                            print(sampled.stdout + sampled.stderr, file=sys.stderr, flush=True)
+                        except (OSError, subprocess.TimeoutExpired) as error:
+                            print(f'Could not sample stalled process: {error}', file=sys.stderr)
                 raise
             finally:
                 print(f'{executable.name}: stopping PID {process.pid}', file=sys.stderr, flush=True)
