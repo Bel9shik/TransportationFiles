@@ -257,7 +257,9 @@ class TransferNode {
               'Файл повреждён или получен не полностью: ${file.name}',
             );
           }
-          await output.flush();
+          // Every write above is awaited. Close before publishing, as Java
+          // does; forcing a physical disk sync here adds hundreds of ms on
+          // Windows/cloud disks and is not part of our completion contract.
           await output.close();
           output = null;
           completed += count;

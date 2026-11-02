@@ -1,0 +1,31 @@
+{
+  "commit": "65e32f5",
+  "ci_run": 41406859564,
+  "platform": "linux",
+  "samples": [
+    {
+      "sha256_100MiB": 0.053586,
+      "write_100MiB": 0.024354,
+      "force_disk_flush": 0.430285,
+      "read_100MiB": 0.012861,
+      "protobuf_100MiB": 0.013208,
+      "tcp_100MiB": 0.063028
+    },
+    {
+      "sha256_100MiB": 0.05347,
+      "write_100MiB": 0.024991,
+      "force_disk_flush": 0.357638,
+      "read_100MiB": 0.009819,
+      "protobuf_100MiB": 0.013699,
+      "tcp_100MiB": 0.090284
+    },
+    {
+      "sha256_100MiB": 0.053423,
+      "write_100MiB": 0.02372,
+      "force_disk_flush": 0.354986,
+      "read_100MiB": 0.01022,
+      "protobuf_100MiB": 0.013798,
+      "tcp_100MiB": 0.146046
+    }
+  ]
+}
