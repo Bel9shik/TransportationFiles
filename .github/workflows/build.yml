@@ -19,30 +19,11 @@ jobs:
           mkdir probe-package
           tar -xzf probe-artifact/TransportationFiles-macOS-X64.tar.gz -C probe-package
           python3 scripts/measure_startup.py "$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles" --runs 20 --max-seconds 15 --require-ready --diagnostics-dir startup-diagnostics > probe-startup.json
-      - name: Summarize only app crash signal and native function names
+      - name: Capture only native function names in debugger
         if: failure()
         run: |
-          python3 - <<'PYTHON'
-          from pathlib import Path
-          import json,time
-          time.sleep(3)
-          summaries=[]
-          for p in (Path.home()/'Library/Logs/DiagnosticReports').glob('TransportationFiles*.ips'):
-              try:
-                  data=json.loads(p.read_text().split('\n',1)[1])
-                  exception=data.get('exception',{})
-                  termination=data.get('termination',{})
-                  frames=data.get('threads',[])[data.get('faultingThread',0)].get('frames',[])
-                  summaries.append({
-                      'exception': {k:exception[k] for k in ('type','signal') if k in exception},
-                      'termination': {k:termination[k] for k in ('namespace','code','indicator') if k in termination},
-                      'functions': [f['symbol'][:300] for f in frames[:30] if 'symbol' in f],
-                  })
-              except (ValueError,IndexError,KeyError):
-                  summaries.append({'error':'Could not parse app crash summary'})
-          out=Path('startup-diagnostics');out.mkdir(exist_ok=True)
-          (out/'crash-summary.json').write_text(json.dumps(summaries,indent=2))
-          PYTHON
+          export PROBE_EXECUTABLE="$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles"
+          lldb --batch -o 'command script import scripts/probe_startup_lldb.py' -o 'script probe_startup_lldb.run(lldb.debugger)'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
