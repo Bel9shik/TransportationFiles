@@ -451,7 +451,7 @@ class TransferSender {
       var count = 0;
       try {
         while (true) {
-          if (_cancelled) throw const GrpcError.cancelled('Передача отменена');
+          if (_cancelled) return;
           // Amortize asynchronous file reads and native hashing; keep the wire
           // messages at 64 KiB and check cancellation between every message.
           final bytes = await input.read(1024 * 1024);
@@ -461,9 +461,7 @@ class TransferSender {
           }
           await hash.add(bytes);
           for (var offset = 0; offset < bytes.length; offset += 64 * 1024) {
-            if (_cancelled) {
-              throw const GrpcError.cancelled('Передача отменена');
-            }
+            if (_cancelled) return;
             final part = Uint8List.sublistView(
               bytes,
               offset,
