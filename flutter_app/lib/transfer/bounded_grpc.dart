@@ -7,6 +7,7 @@ import 'package:grpc/grpc.dart';
 import 'package:http2/transport.dart' as h2;
 
 import 'http2_window_updates.dart';
+import 'http2_data_batching.dart';
 
 // grpc-dart 5.2 allocates the declared message length before deserializing it.
 // Validate the five-byte envelope before forwarding it to that decoder, on
@@ -108,7 +109,9 @@ abstract class _Stream extends h2.TransportStream {
   Stream<h2.StreamMessage> get incomingMessages =>
       boundedMessages(inner.incomingMessages);
   @override
-  StreamSink<h2.StreamMessage> get outgoingMessages => inner.outgoingMessages;
+  late final StreamSink<h2.StreamMessage> outgoingMessages = Platform.isWindows
+      ? BatchedDataSink(inner.outgoingMessages)
+      : inner.outgoingMessages;
   @override
   set onTerminated(void Function(int?) value) {
     inner.onTerminated = value;

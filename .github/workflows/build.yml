@@ -39,14 +39,15 @@ jobs:
           git show e5d0926bbb677e8cfd4a6cb5423c272687c59e8c:flutter_app/lib/transfer/bounded_grpc.dart > flutter_app/lib/transfer/bounded_grpc.dart
           cd flutter_app
           dart build cli --target=tool/benchmark.dart --output=build/before
-          python -c "from pathlib import Path; p=Path('lib/transfer/bounded_grpc.dart'); p.write_text(p.read_text().replace('streamWindowSize: 1024 * 1024','streamWindowSize: 4 * 1024 * 1024').replace('connectionWindowSize: 4 * 1024 * 1024','connectionWindowSize: 16 * 1024 * 1024'))"
-          dart build cli --target=tool/benchmark.dart --output=build/window4
           git restore lib/transfer/bounded_grpc.dart
-          dart build cli --target=tool/benchmark.dart --output=build/window16
+          python -c "from pathlib import Path; p=Path('lib/transfer/bounded_grpc.dart'); p.write_text(p.read_text().replace('streamWindowSize: 16 * 1024 * 1024','streamWindowSize: 1024 * 1024').replace('connectionWindowSize: 32 * 1024 * 1024','connectionWindowSize: 4 * 1024 * 1024'))"
+          dart build cli --target=tool/benchmark.dart --output=build/batch
+          git restore lib/transfer/bounded_grpc.dart
+          dart build cli --target=tool/benchmark.dart --output=build/batchwindow
       - name: Compare unchanged control before and after candidate
         shell: bash
         run: |
-          for variant in before window4 window16 before; do
+          for variant in before batch batchwindow before; do
             stamp=$(date +%s)
             flutter_app/build/$variant/bundle/bin/benchmark.exe components
             python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/$variant/bundle/bin/benchmark.exe --output transfer-$variant-$stamp.json --warmups 3 --runs 9 --cross
