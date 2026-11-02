@@ -5,8 +5,11 @@ import 'package:path/path.dart' as p;
 import 'package:transportfiles/transfer/files.dart';
 import 'package:transportfiles/transfer/transfer.dart';
 
+import 'benchmark_components.dart';
+
 // Use dart build cli to include native assets; dart run would measure JIT.
 Future<void> main(List<String> args) async {
+  if (args[0] == 'components') return benchmarkComponents();
   if (args[0] == 'serve') {
     final root = Directory(args[1]);
     final node = TransferNode(

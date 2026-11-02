@@ -51,6 +51,13 @@ dependency_overrides:
       ref: 23f8574cdfce93c3bb0c6d83d92167d92b9824d5
       path: pkgs/http2
 
+hooks:
+  user_defines:
+    webcrypto:
+      android:
+        # Match Flutter's NDK; older runner defaults produce 4-KiB ELF segments.
+        ndk_version: '28.2.13676358'
+
 
 flutter:
 

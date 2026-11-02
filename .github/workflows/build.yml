@@ -57,6 +57,7 @@ jobs:
         timeout-minutes: 5
         shell: bash
         run: |
+          flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} components
           python scripts/benchmark_transfer.py \
             --classpath core/build/benchmark-classpath.txt \
             --dart-aot flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} \
@@ -154,7 +155,7 @@ jobs:
           java-version: '21'
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools'
+          packages: 'platform-tools ndk;28.2.13676358'
       - uses: gradle/actions/setup-gradle@v4
       - working-directory: flutter_app
         run: flutter pub get --enforce-lockfile
