@@ -35,17 +35,21 @@ jobs:
       - name: Build before and after AOT bundles
         shell: bash
         run: |
-          git fetch origin 967a172f02fe1977693659285b5d5b08d0599294
-          git show 967a172f02fe1977693659285b5d5b08d0599294:flutter_app/lib/transfer/http2_window_updates.dart > flutter_app/lib/transfer/http2_window_updates.dart
+          git fetch origin e5d0926bbb677e8cfd4a6cb5423c272687c59e8c
+          git show e5d0926bbb677e8cfd4a6cb5423c272687c59e8c:flutter_app/lib/transfer/streaming_digest.dart > flutter_app/lib/transfer/streaming_digest.dart
+          git show e5d0926bbb677e8cfd4a6cb5423c272687c59e8c:flutter_app/lib/transfer/transfer.dart > flutter_app/lib/transfer/transfer.dart
           cd flutter_app
           dart build cli --target=tool/benchmark.dart --output=build/before
-          git restore lib/transfer/http2_window_updates.dart
+          git restore lib/transfer/streaming_digest.dart
+          dart build cli --target=tool/benchmark.dart --output=build/native
+          git restore lib/transfer/transfer.dart
           dart build cli --target=tool/benchmark.dart --output=build/after
       - name: Compare unchanged control before and after candidate
         shell: bash
         run: |
-          for variant in before after before; do
+          for variant in before native after before; do
             stamp=$(date +%s)
+            flutter_app/build/$variant/bundle/bin/benchmark.exe components
             python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/$variant/bundle/bin/benchmark.exe --output transfer-$variant-$stamp.json --warmups 3 --runs 9 --cross
           done
       - uses: actions/upload-artifact@v4

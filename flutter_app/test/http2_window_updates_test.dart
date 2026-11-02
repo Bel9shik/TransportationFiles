@@ -34,48 +34,60 @@ void main() {
     },
   );
 
+  for (final eventBatch in [false, true]) {
+    test(
+      'socket batching ($eventBatch) flushes at the byte bound and propagates pause/cancel',
+      () async {
+        var paused = false, cancelled = false;
+        final source = StreamController<List<int>>(
+          sync: true,
+          onPause: () => paused = true,
+          onResume: () => paused = false,
+          onCancel: () => cancelled = true,
+        );
+        final sizes = <int>[];
+        final subscription = coalesceSocketWrites(
+          source.stream,
+          batchEventTurn: eventBatch,
+        ).listen((b) => sizes.add(b.length));
+        for (var i = 0; i < (eventBatch ? 64 : 4); i++) {
+          source.add(Uint8List(16 * 1024));
+        }
+        expect(sizes, [eventBatch ? 1024 * 1024 : 64 * 1024]);
+        subscription.pause();
+        expect(paused, isTrue);
+        subscription.resume();
+        source.add([1]);
+        await subscription.cancel();
+        await Future<void>.delayed(Duration.zero);
+        expect(cancelled, isTrue);
+        expect(sizes, [eventBatch ? 1024 * 1024 : 64 * 1024]);
+        await source.close();
+      },
+    );
+  }
+
   test(
-    'socket batching flushes at the byte bound and propagates pause/cancel',
+    'socket batches microtasks and flushes while the stream stays open',
     () async {
-      var paused = false, cancelled = false;
-      final source = StreamController<List<int>>(
-        sync: true,
-        onPause: () => paused = true,
-        onResume: () => paused = false,
-        onCancel: () => cancelled = true,
-      );
-      final sizes = <int>[];
-      final subscription = coalesceSocketWrites(source.stream)
-          .listen((b) => sizes.add(b.length));
-      for (var i = 0; i < 64; i++) {
-        source.add(Uint8List(16 * 1024));
-      }
-      expect(sizes, [1024 * 1024]);
-      subscription.pause();
-      expect(paused, isTrue);
-      subscription.resume();
+      final source = StreamController<List<int>>(sync: true);
+      final batches = <List<int>>[];
+      final subscription = coalesceSocketWrites(
+        source.stream,
+        batchEventTurn: true,
+      ).listen(batches.add);
       source.add([1]);
-      await subscription.cancel();
+      await Future<void>.value();
+      source.add([2]);
+      expect(batches, isEmpty);
       await Future<void>.delayed(Duration.zero);
-      expect(cancelled, isTrue);
-      expect(sizes, [1024 * 1024]);
+      expect(batches, [
+        [1, 2],
+      ]);
+      await subscription.cancel();
       await source.close();
     },
   );
-
-  test('socket batches microtasks and flushes while the stream stays open', () async {
-    final source = StreamController<List<int>>(sync: true);
-    final batches = <List<int>>[];
-    final subscription = coalesceSocketWrites(source.stream).listen(batches.add);
-    source.add([1]);
-    await Future<void>.value();
-    source.add([2]);
-    expect(batches, isEmpty);
-    await Future<void>.delayed(Duration.zero);
-    expect(batches, [[1, 2]]);
-    await subscription.cancel();
-    await source.close();
-  });
 
   test('large updates cannot overflow the HTTP/2 31-bit increment', () async {
     final result = await coalesceWindowUpdates(
