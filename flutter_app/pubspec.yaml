@@ -25,7 +25,12 @@ dependencies:
   unorm_dart: ^0.3.3
   http2: ^2.3.1
   image: ^4.12.0
-  webcrypto: ^0.6.1
+  # 0.6.1 omits Apple x64 assembly. Pin the reviewed fix until it is released:
+  # https://github.com/google/webcrypto.dart/pull/448
+  webcrypto:
+    git:
+      url: https://github.com/google/webcrypto.dart.git
+      ref: e50fcce3d0c30627b11ffc74eb964b1073d42620
 
 dev_dependencies:
   integration_test:
@@ -35,6 +40,16 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   protoc_plugin: ^25.1.0
+
+dependency_overrides:
+  # grpc 5.2 still constrains http2 to 2.x. This upstream revision adds the
+  # connection receive window needed for throughput; compatibility is tested
+  # against Java and Dart on every desktop platform in CI.
+  http2:
+    git:
+      url: https://github.com/dart-lang/http.git
+      ref: 23f8574cdfce93c3bb0c6d83d92167d92b9824d5
+      path: pkgs/http2
 
 
 flutter:

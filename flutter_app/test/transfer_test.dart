@@ -94,7 +94,7 @@ void main() {
     );
   }
 
-  for (final length in [0, 3, 2 * 1024 * 1024 + 1]) {
+  for (final length in [0, 3, 5 * 1024 * 1024 + 1]) {
     test('single transfer, $length bytes, Unicode filename', () async {
       final bytes = List.generate(length, (i) => i % 251);
       final source = await File(p.join(root.path, 'source'))

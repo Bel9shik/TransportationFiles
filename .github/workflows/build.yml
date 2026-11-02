@@ -47,6 +47,20 @@ jobs:
           flutter test
       - name: Java and Dart wire compatibility
         run: python scripts/test_flutter_interop.py
+      - name: Build Java baseline
+        shell: bash
+        run: ./gradlew :core:test :core:prepareTransferBenchmark :app:packageApp
+      - name: Build AOT transfer benchmark with native assets
+        working-directory: flutter_app
+        run: dart build cli --target=tool/benchmark.dart --output=build/transfer-benchmark
+      - name: Compare verified transfer throughput
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          python scripts/benchmark_transfer.py \
+            --classpath core/build/benchmark-classpath.txt \
+            --dart-aot flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} \
+            --output transfer-results.json --warmups 3 --runs 5 --max-dart-ratio 1.2
       - name: Build native release
         working-directory: flutter_app
         shell: bash
@@ -74,20 +88,6 @@ jobs:
             Windows) flutter build windows --release ;;
             macOS) flutter build macos --release ;;
           esac
-      - name: Build Java baseline
-        shell: bash
-        run: ./gradlew :core:test :core:prepareTransferBenchmark :app:packageApp
-      - name: Build AOT transfer benchmark with native assets
-        working-directory: flutter_app
-        run: dart build cli --target=tool/benchmark.dart --output=build/transfer-benchmark
-      - name: Compare verified transfer throughput
-        timeout-minutes: 5
-        shell: bash
-        run: |
-          python scripts/benchmark_transfer.py \
-            --classpath core/build/benchmark-classpath.txt \
-            --dart-aot flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} \
-            --output transfer-results.json --warmups 3 --runs 5 --max-dart-ratio 1.2
       - name: Compare packaged startup (Linux)
         timeout-minutes: 3
         if: runner.os == 'Linux'

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:fixnum/fixnum.dart';
@@ -445,19 +446,31 @@ class TransferSender {
       try {
         while (true) {
           if (_cancelled) throw const GrpcError.cancelled('Передача отменена');
-          final bytes = await input.read(64 * 1024);
+          // Amortize asynchronous file reads and native hashing; keep the wire
+          // messages at 64 KiB and check cancellation between every message.
+          final bytes = await input.read(1024 * 1024);
           if (bytes.isEmpty) break;
           if (bytes.length > sizes[i] - count) {
             throw const FormatException('Размер исходного файла изменился');
           }
           await hash.add(bytes);
-          count += bytes.length;
-          yield wire.FileChunk(
-            filename: files[i].name,
-            transferToken: token,
-            content: bytes,
-          );
-          progress(completed + count, total);
+          for (var offset = 0; offset < bytes.length; offset += 64 * 1024) {
+            if (_cancelled) {
+              throw const GrpcError.cancelled('Передача отменена');
+            }
+            final part = Uint8List.sublistView(
+              bytes,
+              offset,
+              min(offset + 64 * 1024, bytes.length),
+            );
+            count += part.length;
+            yield wire.FileChunk(
+              filename: files[i].name,
+              transferToken: token,
+              content: part,
+            );
+            progress(completed + count, total);
+          }
         }
         if (count != sizes[i]) {
           throw const FormatException('Размер исходного файла изменился');

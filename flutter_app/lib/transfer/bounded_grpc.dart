@@ -65,7 +65,8 @@ abstract class _Connection implements h2.TransportConnection {
   @override
   Future finish() => inner.finish();
   @override
-  Future terminate([int? errorCode]) => inner.terminate(errorCode);
+  Future terminate([int? errorCode, String? message]) =>
+      inner.terminate(errorCode, message);
 }
 
 class _ServerConnection extends _Connection
@@ -83,6 +84,9 @@ class _ClientConnection extends _Connection
   _ClientConnection(h2.ClientTransportConnection super.inner);
   @override
   bool get isOpen => (inner as h2.ClientTransportConnection).isOpen;
+  @override
+  int? get peerMaxConcurrentStreams =>
+      (inner as h2.ClientTransportConnection).peerMaxConcurrentStreams;
   @override
   h2.ClientTransportStream makeRequest(
     List<h2.Header> headers, {
@@ -154,6 +158,8 @@ class BoundedServer extends Server {
           settings: const h2.ServerSettings(
             concurrentStreamLimit: 1000,
             streamWindowSize: 1024 * 1024,
+            connectionWindowSize: 4 * 1024 * 1024,
+            maxFrameSize: 64 * 1024,
           ),
         ),
         remoteAddress: remoteAddress,
@@ -205,6 +211,11 @@ class BoundedConnector implements ClientTransportConnector {
       h2.ClientTransportConnection.viaStreams(
         socket,
         WindowUpdateSocketSink(socket),
+        settings: const h2.ClientSettings(
+          streamWindowSize: 1024 * 1024,
+          connectionWindowSize: 4 * 1024 * 1024,
+          maxFrameSize: 64 * 1024,
+        ),
       ),
     );
   }

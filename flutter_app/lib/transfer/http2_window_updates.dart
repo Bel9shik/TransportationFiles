@@ -86,7 +86,7 @@ Stream<List<int>> coalesceWindowUpdates(Stream<List<int>> input) {
   return output.stream;
 }
 
-// FrameWriter emits each 16-KiB DATA frame separately, even when they belong
+// FrameWriter emits each DATA frame separately, even when they belong
 // to one gRPC block. Batch synchronous writes into a single socket write while
 // retaining the byte order and propagating socket backpressure.
 Stream<List<int>> coalesceSocketWrites(Stream<List<int>> input) {
