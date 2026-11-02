@@ -47,7 +47,7 @@ for run in range(args.runs):
                 output.flush()
                 log = (Path(directory) / 'log').read_text(errors='replace')
                 print(log, file=sys.stderr)
-                print(f'Completed frame measurements: {timings}; frame={marker.exists()}, network={ready.exists()}',
+                print(f'Completed frame measurements: {timings}; frame={marker.exists()}, network={ready.exists()}, exit={process.poll()}',
                       file=sys.stderr, flush=True)
                 if args.diagnostics_dir:
                     args.diagnostics_dir.mkdir(parents=True, exist_ok=True)
