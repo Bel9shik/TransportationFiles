@@ -20,11 +20,18 @@ jobs:
     env:
       TRANSPORT_DISCOVERY_TEST: 'true'
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
-      # macOS artifacts are already split by runner architecture. Avoid building
-      # both slices twice, including during the native UI integration rebuild.
-      FLUTTER_XCODE_ARCHS: ${{ runner.arch == 'ARM64' && 'arm64' || 'x86_64' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select macOS package architecture
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          # Artifacts are split by architecture; do not build both slices twice.
+          case "$RUNNER_ARCH" in
+            ARM64) echo 'FLUTTER_XCODE_ARCHS=arm64' >> "$GITHUB_ENV" ;;
+            X64) echo 'FLUTTER_XCODE_ARCHS=x86_64' >> "$GITHUB_ENV" ;;
+            *) exit 1 ;;
+          esac
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
