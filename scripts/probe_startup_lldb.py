@@ -12,7 +12,8 @@ def run(debugger):
     results = []
     output = Path('startup-diagnostics/lldb-summary.json')
     output.parent.mkdir(exist_ok=True)
-    for attempt in range(20):
+    for attempt in range(10):
+        print(f"Debug launch {attempt + 1}", flush=True)
         with tempfile.TemporaryDirectory(prefix='transport-debug-') as directory:
             marker = Path(directory) / 'frame'
             ready = Path(directory) / 'ready'
@@ -29,6 +30,9 @@ def run(debugger):
                 else:
                     deadline = time.monotonic() + 30
                     while time.monotonic() < deadline:
+                        event = lldb.SBEvent()
+                        while debugger.GetListener().GetNextEvent(event):
+                            pass
                         state = process.GetState()
                         if marker.exists() and ready.exists():
                             result['ready'] = True
@@ -53,6 +57,7 @@ def run(debugger):
                                     } for frame in list(thread)[:30]],
                                 })
             finally:
+                print(json.dumps(result), flush=True)
                 process.Kill()
                 debugger.DeleteTarget(target)
                 results.append(result)

@@ -1,60 +1,34 @@
-name: Windows throughput probe
+name: macOS Intel repeated startup probe
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
-  probe:
-    runs-on: windows-latest
-    timeout-minutes: 30
-    env:
-      CMAKE_BUILD_PARALLEL_LEVEL: '4'
-      PYTHONUTF8: '1'
+  startup:
+    runs-on: macos-15-intel
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.9'
-          channel: stable
-          cache: true
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
-      - uses: ilammy/setup-nasm@v1
-      - working-directory: flutter_app
-        run: flutter pub get --enforce-lockfile
-      - name: Candidate analysis and tests
-        working-directory: flutter_app
+      - name: Download previously validated Intel package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 41418535620 -n TransportationFiles-Native-macOS-X64 -D probe-artifact
+      - name: Repeated startup with native thread sampling on failure
         run: |
-          flutter analyze
-          flutter test
-      - name: Build Java baseline
-        shell: bash
-        run: ./gradlew :core:prepareTransferBenchmark
-      - name: Build before and after AOT bundles
-        shell: bash
+          mkdir probe-package
+          tar -xzf probe-artifact/TransportationFiles-macOS-X64.tar.gz -C probe-package
+          python3 scripts/measure_startup.py "$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles" --runs 20 --max-seconds 15 --require-ready --diagnostics-dir startup-diagnostics > probe-startup.json
+      - name: Capture only native function names in debugger
+        timeout-minutes: 3
+        if: failure()
         run: |
-          cd flutter_app
-          python -c "from pathlib import Path; p=Path('lib/transfer/bounded_grpc.dart'); p.write_text(p.read_text().replace('const _sendBuffer = 1024 * 1024;', 'const _sendBuffer = 0;').replace('const _receiveBuffer = 1024 * 1024;', 'const _receiveBuffer = 0;'))"
-          dart build cli --target=tool/benchmark.dart --output=build/before
-          python -c "from pathlib import Path; p=Path('lib/transfer/bounded_grpc.dart'); p.write_text(p.read_text().replace('const _sendBuffer = 0;', 'const _sendBuffer = 256 * 1024;'))"
-          dart build cli --target=tool/benchmark.dart --output=build/send256
-          python -c "from pathlib import Path; p=Path('lib/transfer/bounded_grpc.dart'); p.write_text(p.read_text().replace('const _sendBuffer = 256 * 1024;', 'const _sendBuffer = 1024 * 1024;'))"
-          dart build cli --target=tool/benchmark.dart --output=build/send1024
-          git restore lib/transfer/bounded_grpc.dart
-          dart build cli --target=tool/benchmark.dart --output=build/both1024
-      - name: Compare unchanged control before and after candidate
-        shell: bash
-        run: |
-          for variant in before send256 send1024 both1024 before; do
-            stamp=$(date +%s)
-            flutter_app/build/$variant/bundle/bin/benchmark.exe components
-            python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/$variant/bundle/bin/benchmark.exe --output transfer-$variant-$stamp.json --warmups 3 --runs 9 --cross
-          done
+          export PROBE_EXECUTABLE="$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles"
+          lldb --batch -o 'command script import scripts/probe_startup_lldb.py' -o 'script probe_startup_lldb.run(lldb.debugger)'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-throughput-probe
-          path: transfer-*.json
+          name: macos-intel-startup-probe
+          path: |
+            probe-startup.json
+            startup-diagnostics/
