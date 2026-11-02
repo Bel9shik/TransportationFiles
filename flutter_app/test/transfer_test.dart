@@ -132,6 +132,27 @@ void main() {
     expect(await files[0].readAsString(), 'one');
     expect(await files[1].length(), 0);
   });
+  test('sender cancellation drains read ahead and leaves no received file', () async {
+    final source = await File(p.join(root.path, 'source'))
+        .writeAsBytes(List<int>.filled(9 * 1024 * 1024, 42));
+    final client = TransferSender(Endpoint('127.0.0.1', node.port));
+    Future<void>? closing;
+    try {
+      await expectLater(
+        client.send([SourceFile(source, 'file.bin')], 'Sender', () {}, (a, b) {
+          if (a > 0) closing ??= client.close();
+        }),
+        throwsA(isA<GrpcError>()),
+      );
+      await closing;
+      await node.close();
+      await clean();
+      // Windows rejects deletion if an asynchronous read still holds the file.
+      await source.delete();
+    } finally {
+      await client.close();
+    }
+  });
   test('refusal is propagated', () async {
     await node.close();
     node = TransferNode(

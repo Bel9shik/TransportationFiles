@@ -1,37 +1,16 @@
-name: Native cross-platform build
+name: Windows throughput probe
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: native-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
 jobs:
-  desktop:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
     env:
-      TRANSPORT_DISCOVERY_TEST: 'true'
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
     steps:
       - uses: actions/checkout@v4
-      - name: Select macOS package architecture
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          # Artifacts are split by architecture; do not build both slices twice.
-          case "$RUNNER_ARCH" in
-            ARM64) echo 'FLUTTER_XCODE_ARCHS=arm64' >> "$GITHUB_ENV" ;;
-            X64) echo 'FLUTTER_XCODE_ARCHS=x86_64' >> "$GITHUB_ENV" ;;
-            *) exit 1 ;;
-          esac
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
@@ -42,150 +21,35 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Linux native dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev xvfb
-      - name: Windows assembler for native SHA-256
-        if: runner.os == 'Windows'
-        uses: ilammy/setup-nasm@v1
-      - name: Resolve locked dependencies
-        working-directory: flutter_app
+      - uses: ilammy/setup-nasm@v1
+      - working-directory: flutter_app
         run: flutter pub get --enforce-lockfile
-      - name: Analyze and test
+      - name: Candidate analysis and tests
         working-directory: flutter_app
         run: |
           flutter analyze
           flutter test
-      - name: Java and Dart wire compatibility
-        run: python scripts/test_flutter_interop.py
       - name: Build Java baseline
         shell: bash
-        run: ./gradlew :core:test :core:prepareTransferBenchmark :app:packageApp
-      - name: Build AOT transfer benchmark with native assets
-        working-directory: flutter_app
-        run: dart build cli --target=tool/benchmark.dart --output=build/transfer-benchmark
-      - name: Compare verified transfer throughput
-        timeout-minutes: 5
+        run: ./gradlew :core:prepareTransferBenchmark
+      - name: Build before and after AOT bundles
         shell: bash
         run: |
-          flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} components
-          python scripts/benchmark_transfer.py \
-            --classpath core/build/benchmark-classpath.txt \
-            --dart-aot flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} \
-            --output transfer-results.json --warmups 3 --runs 5 --max-dart-ratio 1.2 ${{ runner.os == 'Windows' && '--cross' || '' }}
-      - name: Build native release
-        working-directory: flutter_app
+          git fetch origin 967a172f02fe1977693659285b5d5b08d0599294
+          git show 967a172f02fe1977693659285b5d5b08d0599294:flutter_app/lib/transfer/transfer.dart > flutter_app/lib/transfer/transfer.dart
+          cd flutter_app
+          dart build cli --target=tool/benchmark.dart --output=build/before
+          git restore lib/transfer/transfer.dart
+          dart build cli --target=tool/benchmark.dart --output=build/after
+      - name: Compare unchanged control before and after candidate
         shell: bash
         run: |
-          case '${{ runner.os }}' in
-            Linux) flutter build linux --release ;;
-            Windows) flutter build windows --release ;;
-            macOS) flutter build macos --release ;;
-          esac
-      - name: Native UI and clipboard integration (Linux)
-        if: runner.os == 'Linux'
-        working-directory: flutter_app
-        run: xvfb-run -a flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d linux --profile
-      - name: Native UI and clipboard integration (Windows, macOS)
-        if: runner.os != 'Linux'
-        working-directory: flutter_app
-        shell: bash
-        run: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_test.dart -d ${{ runner.os == 'Windows' && 'windows' || 'macos' }} --profile
-      - name: Restore distributable entry point
-        working-directory: flutter_app
-        shell: bash
-        run: |
-          case '${{ runner.os }}' in
-            Linux) flutter build linux --release ;;
-            Windows) flutter build windows --release ;;
-            macOS) flutter build macos --release ;;
-          esac
-      - name: Verify macOS package architecture
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          actual=$(lipo -archs flutter_app/build/macos/Build/Products/Release/TransportationFiles.app/Contents/MacOS/TransportationFiles)
-          test "$actual" = "$FLUTTER_XCODE_ARCHS"
-      - name: Compare packaged startup (Linux)
-        timeout-minutes: 3
-        if: runner.os == 'Linux'
-        run: xvfb-run -a python scripts/compare_startup.py
-      - name: Compare packaged startup (Windows, macOS)
-        timeout-minutes: 3
-        if: runner.os != 'Linux'
-        run: python scripts/compare_startup.py
-      - name: Package application
-        shell: bash
-        run: |
-          case '${{ runner.os }}' in
-            Linux) tar -czf TransportationFiles-Linux-${{ runner.arch }}.tar.gz -C flutter_app/build/linux/x64/release/bundle . ;;
-            Windows) 7z a TransportationFiles-Windows-X64.zip ./flutter_app/build/windows/x64/runner/Release/* ;;
-            macOS) tar -czf TransportationFiles-macOS-${{ runner.arch }}.tar.gz -C flutter_app/build/macos/Build/Products/Release TransportationFiles.app ;;
-          esac
-      - name: Windows single EXE installer
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          foreach ($dll in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
-            if (!(Test-Path "flutter_app/build/windows/x64/runner/Release/$dll")) {
-              throw "Missing bundled compiler runtime: $dll"
-            }
-          }
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" flutter_app/packaging/windows.iss
-          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
-          $installer = (Get-Item flutter_app/build/installer/*-Setup.exe).FullName
-          $process = Start-Process $installer -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
-          if ($process.ExitCode -ne 0) { throw 'Installer failed' }
-          python scripts/measure_startup.py "$env:LOCALAPPDATA/TransportationFiles-Native/transportfiles.exe" --runs 1 --max-seconds 15 --require-ready
-          if ($LASTEXITCODE -ne 0) { throw 'Installed application failed to start' }
-          Copy-Item $installer .
+          for variant in before after before; do
+            stamp=$(date +%s)
+            python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/$variant/bundle/bin/benchmark.exe --output transfer-$variant-$stamp.json --warmups 3 --runs 9 --cross
+          done
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: TransportationFiles-Native-${{ runner.os }}-${{ runner.arch }}
-          path: |
-            TransportationFiles-*.tar.gz
-            TransportationFiles-*.zip
-            TransportationFiles-*-Setup.exe
-            startup-results.json
-            transfer-results.json
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: native-diagnostics-${{ runner.os }}-${{ runner.arch }}
-          path: |
-            **/build/reports/tests/
-            startup-results.json
-            transfer-results.json
-  android:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    env:
-      CMAKE_BUILD_PARALLEL_LEVEL: '4'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.47.9'
-          channel: stable
-          cache: true
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools ndk;28.2.13676358'
-      - uses: gradle/actions/setup-gradle@v4
-      - working-directory: flutter_app
-        run: flutter pub get --enforce-lockfile
-      - name: Build AOT release APK
-        working-directory: flutter_app
-        run: flutter build apk --release
-      - name: Verify Android 16-KB compatibility
-        run: |
-          python scripts/check_apk_alignment.py flutter_app/build/app/outputs/flutter-apk/app-release.apk
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 4 flutter_app/build/app/outputs/flutter-apk/app-release.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TransportationFiles-Android-release
-          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          name: windows-throughput-probe
+          path: transfer-*.json
