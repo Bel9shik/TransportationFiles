@@ -202,7 +202,10 @@ class TransferNode {
       final bytes = buffered.takeBytes();
       // Hash the same immutable buffer while the asynchronous disk write is
       // pending. Await both before reusing state or acknowledging the file.
-      await Future.wait<void>([output!.writeFrom(bytes), hash.add(bytes)]);
+      await Future.wait<void>([
+        output!.writeFrom(bytes),
+        hash.add(bytes),
+      ]);
     }
 
     final iterator = StreamIterator(chunks);
@@ -446,21 +449,15 @@ class TransferSender {
       final input = await files[i].file.open();
       final hash = StreamingDigest();
       var count = 0;
-      Future<Uint8List>? pendingRead;
       try {
         while (true) {
           if (_cancelled) return;
           // Amortize asynchronous file reads and native hashing; keep the wire
           // messages at 64 KiB and check cancellation between every message.
-          final bytes = await (pendingRead ?? input.read(1024 * 1024));
+          final bytes = await input.read(1024 * 1024);
           if (bytes.isEmpty) break;
           if (bytes.length > sizes[i] - count) {
             throw const FormatException('Размер исходного файла изменился');
-          }
-          if (Platform.isWindows) {
-            pendingRead = input.read(1024 * 1024);
-            // Observe a read error immediately; await below still propagates it.
-            pendingRead.ignore();
           }
           await hash.add(bytes);
           for (var offset = 0; offset < bytes.length; offset += 64 * 1024) {
@@ -491,11 +488,6 @@ class TransferSender {
         completed += count;
       } finally {
         try {
-          // Cancellation must not close a file with an outstanding async read.
-          await pendingRead?.then<void>(
-            (_) {},
-            onError: (Object _, StackTrace _) {},
-          );
           await hash.close();
         } finally {
           await input.close();

@@ -157,8 +157,8 @@ class BoundedServer extends Server {
           WindowUpdateSocketSink(socket),
           settings: const h2.ServerSettings(
             concurrentStreamLimit: 1000,
-            streamWindowSize: 1024 * 1024,
-            connectionWindowSize: 4 * 1024 * 1024,
+            streamWindowSize: 16 * 1024 * 1024,
+            connectionWindowSize: 32 * 1024 * 1024,
             // A 64-KiB file block also carries protobuf/gRPC headers.
             maxFrameSize: 128 * 1024,
           ),
@@ -213,8 +213,8 @@ class BoundedConnector implements ClientTransportConnector {
         socket,
         WindowUpdateSocketSink(socket),
         settings: const h2.ClientSettings(
-          streamWindowSize: 1024 * 1024,
-          connectionWindowSize: 4 * 1024 * 1024,
+          streamWindowSize: 16 * 1024 * 1024,
+          connectionWindowSize: 32 * 1024 * 1024,
           maxFrameSize: 128 * 1024,
         ),
       ),

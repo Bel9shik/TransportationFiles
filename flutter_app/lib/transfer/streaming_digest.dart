@@ -1,16 +1,12 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:webcrypto/webcrypto.dart';
 
-import 'windows_digest.dart';
-
 /// Native SHA-256 with at most one caller-supplied chunk in flight.
 class StreamingDigest {
-  final _windows = Platform.isWindows ? WindowsDigest() : null;
   var _listened = false;
   late final _input = StreamController<List<int>>(
     sync: true,
@@ -21,7 +17,6 @@ class StreamingDigest {
   StackTrace? _stack;
 
   StreamingDigest() {
-    if (_windows != null) return;
     _result = Future.sync(() => Hash.sha256.digestStream(_input.stream));
     // Observe initialization errors even before the first chunk is supplied.
     unawaited(
@@ -39,10 +34,6 @@ class StreamingDigest {
   }
 
   Future<void> add(List<int> bytes) async {
-    if (_windows != null) {
-      _windows.add(bytes);
-      return;
-    }
     if (_error != null) Error.throwWithStackTrace(_error!, _stack!);
     // addStream propagates the native digest stream's pause/resume. add alone
     // could queue the entire file when hashing cannot keep up with its producer.
@@ -52,16 +43,11 @@ class StreamingDigest {
   }
 
   Future<List<int>> finish() async {
-    if (_windows != null) return _windows.finish();
     await _input.close();
     return _result;
   }
 
   Future<void> close() async {
-    if (_windows != null) {
-      _windows.close();
-      return;
-    }
     await _input.close();
     await _result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
   }
