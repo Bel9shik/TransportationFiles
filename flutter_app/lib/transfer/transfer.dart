@@ -202,7 +202,10 @@ class TransferNode {
       final bytes = buffered.takeBytes();
       // Hash the same immutable buffer while the asynchronous disk write is
       // pending. Await both before reusing state or acknowledging the file.
-      await Future.wait<void>([output!.writeFrom(bytes), hash.add(bytes)]);
+      await Future.wait<void>([
+        output!.writeFrom(bytes),
+        hash.add(bytes),
+      ]);
     }
 
     final iterator = StreamIterator(chunks);
@@ -269,9 +272,9 @@ class TransferNode {
           hash = StreamingDigest();
         } else {
           // Keep network messages bounded at 64 KiB, but amortize disk/FFI
-          // scheduling over at most 4 MiB plus one incoming chunk.
+          // scheduling over at most 1 MiB plus one incoming chunk.
           buffered.add(chunk.content);
-          if (buffered.length >= 4 * 1024 * 1024) await flushBuffered();
+          if (buffered.length >= 1024 * 1024) await flushBuffered();
           count += chunk.content.length;
           progress(completed + count, session.offer.size);
         }
@@ -446,28 +449,16 @@ class TransferSender {
       final input = await files[i].file.open();
       final hash = StreamingDigest();
       var count = 0;
-      Future<Uint8List> readNext() {
-        final read = input.read(4 * 1024 * 1024);
-        // Observe errors immediately even while the preceding block is sent.
-        // Awaiting the original future below still propagates a read failure.
-        read.ignore();
-        return read;
-      }
-
-      var pendingRead = readNext();
       try {
         while (true) {
           if (_cancelled) return;
           // Amortize asynchronous file reads and native hashing; keep the wire
           // messages at 64 KiB and check cancellation between every message.
-          final bytes = await pendingRead;
+          final bytes = await input.read(1024 * 1024);
           if (bytes.isEmpty) break;
           if (bytes.length > sizes[i] - count) {
             throw const FormatException('Размер исходного файла изменился');
           }
-          // One read ahead overlaps disk I/O with hashing and sending. Each
-          // buffer is owned by its messages; it is never reused or mutated.
-          pendingRead = readNext();
           await hash.add(bytes);
           for (var offset = 0; offset < bytes.length; offset += 64 * 1024) {
             if (_cancelled) return;
@@ -497,12 +488,6 @@ class TransferSender {
         completed += count;
       } finally {
         try {
-          // A cancelled stream can still have an outstanding asynchronous read.
-          // Drain it before closing, preserving the primary transfer error.
-          await pendingRead.then<void>(
-            (_) {},
-            onError: (Object _, StackTrace _) {},
-          );
           await hash.close();
         } finally {
           await input.close();

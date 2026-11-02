@@ -132,7 +132,7 @@ void main() {
     expect(await files[0].readAsString(), 'one');
     expect(await files[1].length(), 0);
   });
-  test('sender cancellation drains read ahead and leaves no received file', () async {
+  test('sender cancellation closes the source and leaves no received file', () async {
     final source = await File(p.join(root.path, 'source'))
         .writeAsBytes(List<int>.filled(9 * 1024 * 1024, 42));
     final client = TransferSender(Endpoint('127.0.0.1', node.port));

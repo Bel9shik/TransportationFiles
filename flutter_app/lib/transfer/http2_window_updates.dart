@@ -108,11 +108,11 @@ Stream<List<int>> coalesceSocketWrites(Stream<List<int>> input) {
       subscription = input.listen(
         (data) {
           bytes.add(data);
-          if (bytes.length >= 64 * 1024) {
+          if (bytes.length >= 1024 * 1024) {
             flush();
           } else if (!scheduled) {
             scheduled = true;
-            scheduleMicrotask(flush);
+            Timer.run(flush);
           }
         },
         onError: (Object error, StackTrace stack) {

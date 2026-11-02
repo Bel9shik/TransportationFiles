@@ -36,10 +36,10 @@ jobs:
         shell: bash
         run: |
           git fetch origin 967a172f02fe1977693659285b5d5b08d0599294
-          git show 967a172f02fe1977693659285b5d5b08d0599294:flutter_app/lib/transfer/transfer.dart > flutter_app/lib/transfer/transfer.dart
+          git show 967a172f02fe1977693659285b5d5b08d0599294:flutter_app/lib/transfer/http2_window_updates.dart > flutter_app/lib/transfer/http2_window_updates.dart
           cd flutter_app
           dart build cli --target=tool/benchmark.dart --output=build/before
-          git restore lib/transfer/transfer.dart
+          git restore lib/transfer/http2_window_updates.dart
           dart build cli --target=tool/benchmark.dart --output=build/after
       - name: Compare unchanged control before and after candidate
         shell: bash
