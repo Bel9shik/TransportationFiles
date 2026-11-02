@@ -55,7 +55,9 @@ Stream<List<int>> coalesceWindowUpdates(Stream<List<int>> input) {
                 emit(stream, combined);
               } else {
                 pending[stream] = combined;
-                timer ??= Timer(const Duration(milliseconds: 1), flush);
+                // Batch the current event turn, without imposing the Windows
+                // timer granularity on a peer waiting for the remaining credit.
+                timer ??= Timer(Duration.zero, flush);
               }
               return;
             }
