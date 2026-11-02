@@ -91,7 +91,10 @@ Stream<List<int>> coalesceWindowUpdates(Stream<List<int>> input) {
 // FrameWriter emits each DATA frame separately, even when they belong
 // to one gRPC block. Batch synchronous writes into a single socket write while
 // retaining the byte order and propagating socket backpressure.
-Stream<List<int>> coalesceSocketWrites(Stream<List<int>> input) {
+Stream<List<int>> coalesceSocketWrites(
+  Stream<List<int>> input, {
+  bool batchEventTurn = false,
+}) {
   late StreamController<List<int>> output;
   late StreamSubscription<List<int>> subscription;
   final bytes = BytesBuilder(copy: false);
@@ -108,11 +111,15 @@ Stream<List<int>> coalesceSocketWrites(Stream<List<int>> input) {
       subscription = input.listen(
         (data) {
           bytes.add(data);
-          if (bytes.length >= 64 * 1024) {
+          if (bytes.length >= (batchEventTurn ? 1024 * 1024 : 64 * 1024)) {
             flush();
           } else if (!scheduled) {
             scheduled = true;
-            scheduleMicrotask(flush);
+            if (batchEventTurn) {
+              Timer.run(flush);
+            } else {
+              scheduleMicrotask(flush);
+            }
           }
         },
         onError: (Object error, StackTrace stack) {
@@ -147,8 +154,14 @@ class WindowUpdateSocketSink implements StreamSink<List<int>> {
   void addError(Object error, [StackTrace? stackTrace]) =>
       socket.addError(error, stackTrace);
   @override
-  Future<void> addStream(Stream<List<int>> stream) =>
-      socket.addStream(coalesceSocketWrites(coalesceWindowUpdates(stream)));
+  Future<void> addStream(Stream<List<int>> stream) => socket.addStream(
+    coalesceSocketWrites(
+      coalesceWindowUpdates(stream),
+      // Windows benefits from grouping gRPC microtasks into fewer socket
+      // writes, bounded at 1 MiB. Other platforms keep lower-latency batching.
+      batchEventTurn: Platform.isWindows,
+    ),
+  );
   @override
   Future<void> close() async {
     await socket.close();
