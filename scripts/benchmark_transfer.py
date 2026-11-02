@@ -29,6 +29,8 @@ def main():
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--warmups', type=int, default=3)
     parser.add_argument('--runs', type=int, default=7)
+    parser.add_argument('--cross', action='store_true',
+                        help='Also measure Java-to-Dart and Dart-to-Java to isolate each peer')
     parser.add_argument('--max-dart-ratio', type=float,
                         help='Fail if Dart median / Java median exceeds this ratio for either workload')
     args = parser.parse_args()
@@ -41,6 +43,10 @@ def main():
                  'kardash.project.transfer.TransferBenchmark'],
         'dart_aot': [str(args.dart_aot.resolve(strict=True))],
     }
+    pairs = {name: (command, command) for name, command in peers.items()}
+    if args.cross:
+        pairs.update(java_to_dart=(peers['java'], peers['dart_aot']),
+                     dart_to_java=(peers['dart_aot'], peers['java']))
     result = {'platform': platform.platform(), 'warmups': args.warmups, 'runs': args.runs,
               'metric': 'send call through receiver acknowledgement, seconds; separate processes; '
                         'loopback; SHA256 and disk writes included; OS caches not cleared', 'cases': []}
@@ -61,13 +67,14 @@ def main():
             expected = Counter((f.stat().st_size, digest(f)) for f in files)
             expected = Counter({key: count * total_runs for key, count in expected.items()})
             total_bytes = sum(f.stat().st_size for f in files)
-            order = list(peers) if scenario_index == 0 else list(reversed(peers))
+            order = list(pairs) if scenario_index == 0 else list(reversed(pairs))
             for name in order:
+                sender_command, receiver_command = pairs[name]
                 print(f'{scenario}: {name}, {args.warmups} warmups + {args.runs} samples', flush=True)
                 with tempfile.TemporaryDirectory(dir=root) as destination:
                     destination = Path(destination)
                     with (root / 'receiver.log').open('w') as log:
-                        receiver = subprocess.Popen(peers[name] + ['serve', str(destination)],
+                        receiver = subprocess.Popen(receiver_command + ['serve', str(destination)],
                                                     stdin=subprocess.PIPE, stdout=log, stderr=log)
                         try:
                             deadline = time.monotonic() + 30
@@ -77,7 +84,7 @@ def main():
                                 assert time.monotonic() < deadline, 'Receiver did not start'
                                 time.sleep(0.01)
                             output = subprocess.check_output(
-                                peers[name] + ['send', port.read_text(), str(total_runs)] + list(map(str, files)),
+                                sender_command + ['send', port.read_text(), str(total_runs)] + list(map(str, files)),
                                 text=True, timeout=600)
                             samples = [float(line) for line in output.splitlines()]
                             assert len(samples) == total_runs and all(s > 0 for s in samples), output

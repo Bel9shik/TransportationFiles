@@ -200,8 +200,12 @@ class TransferNode {
     Future<void> flushBuffered() async {
       if (buffered.isEmpty) return;
       final bytes = buffered.takeBytes();
-      await output!.writeFrom(bytes);
-      await hash.add(bytes);
+      // Hash the same immutable buffer while the asynchronous disk write is
+      // pending. Await both before reusing state or acknowledging the file.
+      await Future.wait<void>([
+        output!.writeFrom(bytes),
+        hash.add(bytes),
+      ]);
     }
 
     final iterator = StreamIterator(chunks);

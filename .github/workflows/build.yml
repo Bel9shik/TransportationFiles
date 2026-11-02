@@ -20,6 +20,9 @@ jobs:
     env:
       TRANSPORT_DISCOVERY_TEST: 'true'
       CMAKE_BUILD_PARALLEL_LEVEL: '4'
+      # macOS artifacts are already split by runner architecture. Avoid building
+      # both slices twice, including during the native UI integration rebuild.
+      FLUTTER_XCODE_ARCHS: ${{ runner.arch == 'ARM64' && 'arm64' || 'x86_64' }}
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -62,7 +65,7 @@ jobs:
           python scripts/benchmark_transfer.py \
             --classpath core/build/benchmark-classpath.txt \
             --dart-aot flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} \
-            --output transfer-results.json --warmups 3 --runs 5 --max-dart-ratio 1.2
+            --output transfer-results.json --warmups 3 --runs 5 --max-dart-ratio 1.2 ${{ runner.os == 'Windows' && '--cross' || '' }}
       - name: Build native release
         working-directory: flutter_app
         shell: bash
@@ -90,6 +93,12 @@ jobs:
             Windows) flutter build windows --release ;;
             macOS) flutter build macos --release ;;
           esac
+      - name: Verify macOS package architecture
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          actual=$(lipo -archs flutter_app/build/macos/Build/Products/Release/TransportationFiles.app/Contents/MacOS/TransportationFiles)
+          test "$actual" = "$FLUTTER_XCODE_ARCHS"
       - name: Compare packaged startup (Linux)
         timeout-minutes: 3
         if: runner.os == 'Linux'
