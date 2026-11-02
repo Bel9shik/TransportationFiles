@@ -24,7 +24,7 @@ jobs:
         if: failure()
         run: |
           export PROBE_EXECUTABLE="$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles"
-          lldb --batch -o 'command script import scripts/probe_startup_lldb.py' -o 'script probe_startup_lldb.run(lldb.debugger)'
+          python3 scripts/run_startup_debugger.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
