@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:transportfiles/transfer/files.dart';
 import 'package:transportfiles/transfer/transfer.dart';
 
-// Compile with dart compile exe: dart run would measure JIT instead of AOT.
+// Use dart build cli to include native assets; dart run would measure JIT.
 Future<void> main(List<String> args) async {
   if (args[0] == 'serve') {
     final root = Directory(args[1]);

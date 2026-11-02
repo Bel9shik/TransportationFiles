@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import platform
 import random
+import shutil
 import statistics
 import subprocess
 import tempfile
@@ -22,14 +23,18 @@ def digest(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--java', required=True, type=Path)
+    parser.add_argument('--java', default=shutil.which('java'), type=Path)
     parser.add_argument('--classpath', required=True, type=Path)
     parser.add_argument('--dart-aot', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--warmups', type=int, default=3)
     parser.add_argument('--runs', type=int, default=7)
+    parser.add_argument('--max-dart-ratio', type=float,
+                        help='Fail if Dart median / Java median exceeds this ratio for either workload')
     args = parser.parse_args()
     assert args.warmups >= 0 and args.runs > 0
+    assert args.java is not None, 'Java executable not found; supply --java'
+    assert args.max_dart_ratio is None or args.max_dart_ratio > 0
     total_runs = args.warmups + args.runs
     peers = {
         'java': [str(args.java.resolve(strict=True)), '-cp', args.classpath.read_text().strip(),
@@ -101,6 +106,12 @@ def main():
                                 receiver.wait(timeout=5)
                             receiver.stdin.close()
     args.output.write_text(json.dumps(result, indent=2) + '\n')
+    if args.max_dart_ratio is not None:
+        for scenario, _ in scenarios:
+            cases = {c['implementation']: c['median_seconds']
+                     for c in result['cases'] if c['scenario'] == scenario}
+            ratio = cases['dart_aot'] / cases['java']
+            assert ratio <= args.max_dart_ratio, f'{scenario}: Dart/Java {ratio:.3f} exceeds {args.max_dart_ratio}'
 
 
 if __name__ == '__main__':

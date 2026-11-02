@@ -34,6 +34,9 @@ jobs:
       - name: Linux native dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libayatana-appindicator3-dev xvfb
+      - name: Windows assembler for native SHA-256
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
       - name: Resolve locked dependencies
         working-directory: flutter_app
         run: flutter pub get --enforce-lockfile
@@ -73,7 +76,18 @@ jobs:
           esac
       - name: Build Java baseline
         shell: bash
-        run: ./gradlew :core:test :app:packageApp
+        run: ./gradlew :core:test :core:prepareTransferBenchmark :app:packageApp
+      - name: Build AOT transfer benchmark with native assets
+        working-directory: flutter_app
+        run: dart build cli --target=tool/benchmark.dart --output=build/transfer-benchmark
+      - name: Compare verified transfer throughput
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          python scripts/benchmark_transfer.py \
+            --classpath core/build/benchmark-classpath.txt \
+            --dart-aot flutter_app/build/transfer-benchmark/bundle/bin/benchmark${{ runner.os == 'Windows' && '.exe' || '' }} \
+            --output transfer-results.json --warmups 3 --runs 5 --max-dart-ratio 1.2
       - name: Compare packaged startup (Linux)
         timeout-minutes: 3
         if: runner.os == 'Linux'
@@ -115,6 +129,7 @@ jobs:
             TransportationFiles-*.zip
             TransportationFiles-*-Setup.exe
             startup-results.json
+            transfer-results.json
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -122,6 +137,7 @@ jobs:
           path: |
             **/build/reports/tests/
             startup-results.json
+            transfer-results.json
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 40

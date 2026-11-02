@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart' as crypto;
 import 'package:fixnum/fixnum.dart';
 import 'package:grpc/grpc.dart';
 import 'package:path/path.dart' as p;
@@ -10,6 +9,7 @@ import '../generated/transport_files.pbgrpc.dart' as wire;
 import 'files.dart';
 import 'publish.dart';
 import 'bounded_grpc.dart';
+import 'streaming_digest.dart';
 
 class OfferedFile {
   final String name;
@@ -95,7 +95,7 @@ class TransferNode {
   final Progress progress;
   final void Function(List<File> files) received;
   final void Function(String error) failed;
-  late final Server _server;
+  late final BoundedServer _server;
   _Session? _current;
   TransferNode({
     required this.approve,
@@ -107,7 +107,7 @@ class TransferNode {
   }
   int get port => _server.port!;
   Future<void> start({int port = 0}) =>
-      _server.serve(address: InternetAddress.anyIPv4, port: port);
+      _server.bind(address: InternetAddress.anyIPv4, port: port);
   void cancelIncoming() {
     final session = _current;
     session?.cancel();
@@ -183,8 +183,7 @@ class TransferNode {
     Directory? temporary;
     RandomAccessFile? output;
     var index = 0, count = 0, completed = 0;
-    var hashResult = _DigestResult();
-    var hash = crypto.sha256.startChunkedConversion(hashResult);
+    var hash = StreamingDigest();
     final iterator = StreamIterator(chunks);
     final deadline = DateTime.now().add(const Duration(minutes: 10));
     try {
@@ -228,11 +227,11 @@ class TransferNode {
           throw const FormatException('Размер файла превышен');
         }
         if (chunk.sha256.isNotEmpty) {
-          hash.close();
+          final digest = await hash.finish();
           if (chunk.content.isNotEmpty ||
               chunk.sha256.length != 32 ||
               count != file.size ||
-              !_equal(hashResult.value!.bytes, chunk.sha256)) {
+              !_equal(digest, chunk.sha256)) {
             throw FormatException(
               'Файл повреждён или получен не полностью: ${file.name}',
             );
@@ -243,11 +242,10 @@ class TransferNode {
           completed += count;
           count = 0;
           index++;
-          hashResult = _DigestResult();
-          hash = crypto.sha256.startChunkedConversion(hashResult);
+          hash = StreamingDigest();
         } else {
           await output.writeFrom(chunk.content);
-          hash.add(chunk.content);
+          await hash.add(chunk.content);
           count += chunk.content.length;
           progress(completed + count, session.offer.size);
         }
@@ -279,6 +277,7 @@ class TransferNode {
       if (session != null) failed(errorText(e));
       throw GrpcError.dataLoss(errorText(e));
     } finally {
+      await hash.close();
       await iterator.cancel();
       await output?.close();
       if (temporary != null && await temporary.exists()) {
@@ -308,17 +307,6 @@ class _Receiver extends wire.FileTransferServiceBase {
     ServiceCall call,
     Stream<wire.FileChunk> request,
   ) => node._receive(call, request);
-}
-
-class _DigestResult implements Sink<crypto.Digest> {
-  crypto.Digest? value;
-  @override
-  void add(crypto.Digest data) {
-    value = data;
-  }
-
-  @override
-  void close() {}
 }
 
 bool _equal(List<int> a, List<int> b) {
@@ -429,9 +417,8 @@ class TransferSender {
   ) async* {
     var completed = 0;
     for (var i = 0; i < files.length; i++) {
-      final result = _DigestResult();
-      final hash = crypto.sha256.startChunkedConversion(result);
       final input = await files[i].file.open();
+      final hash = StreamingDigest();
       var count = 0;
       try {
         while (true) {
@@ -441,7 +428,7 @@ class TransferSender {
           if (bytes.length > sizes[i] - count) {
             throw const FormatException('Размер исходного файла изменился');
           }
-          hash.add(bytes);
+          await hash.add(bytes);
           count += bytes.length;
           yield wire.FileChunk(
             filename: files[i].name,
@@ -453,15 +440,19 @@ class TransferSender {
         if (count != sizes[i]) {
           throw const FormatException('Размер исходного файла изменился');
         }
-        hash.close();
+        final digest = await hash.finish();
         yield wire.FileChunk(
           filename: files[i].name,
           transferToken: token,
-          sha256: result.value!.bytes,
+          sha256: digest,
         );
         completed += count;
       } finally {
-        await input.close();
+        try {
+          await hash.close();
+        } finally {
+          await input.close();
+        }
       }
     }
   }

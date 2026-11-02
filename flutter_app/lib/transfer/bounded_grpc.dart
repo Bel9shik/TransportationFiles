@@ -6,6 +6,8 @@ import 'dart:typed_data';
 import 'package:grpc/grpc.dart';
 import 'package:http2/transport.dart' as h2;
 
+import 'http2_window_updates.dart';
+
 // grpc-dart 5.2 allocates the declared message length before deserializing it.
 // Validate the five-byte envelope before forwarding it to that decoder, on
 // both client and server. Our protocol never uses compressed gRPC messages.
@@ -129,7 +131,44 @@ class _ClientStream extends _Stream implements h2.ClientTransportStream {
 }
 
 class BoundedServer extends Server {
+  ServerSocket? _listener;
   BoundedServer({required super.services}) : super.create();
+  @override
+  int? get port => _listener?.port;
+
+  Future<void> bind({required InternetAddress address, int port = 0}) async {
+    final listener = await ServerSocket.bind(address, port);
+    _listener = listener;
+    listener.listen((socket) {
+      socket.setOption(SocketOption.tcpNoDelay, true);
+      InternetAddress? remoteAddress;
+      try {
+        remoteAddress = socket.remoteAddress;
+      } on SocketException {
+        // The peer may disconnect between accept and address lookup.
+      }
+      serveConnection(
+        connection: h2.ServerTransportConnection.viaStreams(
+          socket,
+          WindowUpdateSocketSink(socket),
+          settings: const h2.ServerSettings(
+            concurrentStreamLimit: 1000,
+            streamWindowSize: 1024 * 1024,
+          ),
+        ),
+        remoteAddress: remoteAddress,
+      );
+    });
+  }
+
+  @override
+  Future<void> shutdown() async {
+    final listener = _listener;
+    _listener = null;
+    await listener?.close();
+    await super.shutdown();
+  }
+
   @override
   Future<void> serveConnection({
     required h2.ServerTransportConnection connection,
@@ -162,7 +201,12 @@ class BoundedConnector implements ClientTransportConnector {
     }
     _socket = socket;
     socket.setOption(SocketOption.tcpNoDelay, true);
-    return _ClientConnection(h2.ClientTransportConnection.viaSocket(socket));
+    return _ClientConnection(
+      h2.ClientTransportConnection.viaStreams(
+        socket,
+        WindowUpdateSocketSink(socket),
+      ),
+    );
   }
 
   @override

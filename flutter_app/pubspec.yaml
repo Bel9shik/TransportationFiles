@@ -25,6 +25,7 @@ dependencies:
   unorm_dart: ^0.3.3
   http2: ^2.3.1
   image: ^4.12.0
+  webcrypto: ^0.6.1
 
 dev_dependencies:
   integration_test:
