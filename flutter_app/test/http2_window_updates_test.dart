@@ -47,10 +47,10 @@ void main() {
       final sizes = <int>[];
       final subscription = coalesceSocketWrites(source.stream)
           .listen((b) => sizes.add(b.length));
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 64; i++) {
         source.add(Uint8List(16 * 1024));
       }
-      expect(sizes, [64 * 1024]);
+      expect(sizes, [1024 * 1024]);
       subscription.pause();
       expect(paused, isTrue);
       subscription.resume();
@@ -58,10 +58,24 @@ void main() {
       await subscription.cancel();
       await Future<void>.delayed(Duration.zero);
       expect(cancelled, isTrue);
-      expect(sizes, [64 * 1024]);
+      expect(sizes, [1024 * 1024]);
       await source.close();
     },
   );
+
+  test('socket batches microtasks and flushes while the stream stays open', () async {
+    final source = StreamController<List<int>>(sync: true);
+    final batches = <List<int>>[];
+    final subscription = coalesceSocketWrites(source.stream).listen(batches.add);
+    source.add([1]);
+    await Future<void>.value();
+    source.add([2]);
+    expect(batches, isEmpty);
+    await Future<void>.delayed(Duration.zero);
+    expect(batches, [[1, 2]]);
+    await subscription.cancel();
+    await source.close();
+  });
 
   test('large updates cannot overflow the HTTP/2 31-bit increment', () async {
     final result = await coalesceWindowUpdates(

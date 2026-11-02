@@ -89,8 +89,9 @@ Stream<List<int>> coalesceWindowUpdates(Stream<List<int>> input) {
 }
 
 // FrameWriter emits each DATA frame separately, even when they belong
-// to one gRPC block. Batch synchronous writes into a single socket write while
-// retaining the byte order and propagating socket backpressure.
+// to one gRPC block. Batch up to 1 MiB across the current event turn, including
+// microtasks, while retaining byte order and socket backpressure. A timer flushes
+// partial batches even when the peer is waiting for a small control frame.
 Stream<List<int>> coalesceSocketWrites(Stream<List<int>> input) {
   late StreamController<List<int>> output;
   late StreamSubscription<List<int>> subscription;
