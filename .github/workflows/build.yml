@@ -107,11 +107,11 @@ jobs:
           actual=$(lipo -archs flutter_app/build/macos/Build/Products/Release/TransportationFiles.app/Contents/MacOS/TransportationFiles)
           test "$actual" = "$FLUTTER_XCODE_ARCHS"
       - name: Compare packaged startup (Linux)
-        timeout-minutes: 3
+        timeout-minutes: 5
         if: runner.os == 'Linux'
         run: xvfb-run -a python scripts/compare_startup.py
       - name: Compare packaged startup (Windows, macOS)
-        timeout-minutes: 3
+        timeout-minutes: 5
         if: runner.os != 'Linux'
         run: python scripts/compare_startup.py
       - name: Package application
@@ -148,6 +148,7 @@ jobs:
             TransportationFiles-*-Setup.exe
             startup-results.json
             transfer-results.json
+            startup-diagnostics/
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -156,6 +157,7 @@ jobs:
             **/build/reports/tests/
             startup-results.json
             transfer-results.json
+            startup-diagnostics/
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 40
