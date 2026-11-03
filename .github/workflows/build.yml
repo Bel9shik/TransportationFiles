@@ -14,6 +14,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh run download 41418535620 -n TransportationFiles-Native-macOS-X64 -D probe-artifact
+      - name: Prepare core directory only on disposable macOS GitHub runner
+        run: |
+          test "$GITHUB_ACTIONS" = true
+          test "$RUNNER_OS" = macOS
+          sudo install -d -m 1777 /cores
       - name: Capture own ephemeral app crash as safe offline function summaries
         timeout-minutes: 4
         run: |
