@@ -150,7 +150,7 @@ def core_main():
     deadline = time.monotonic() + 150
     executable = str(Path(os.environ['PROBE_EXECUTABLE']).resolve(strict=True))
     snapshot_script = Path('scripts/probe_startup_lldb.py').resolve()
-    for attempt in range(20):
+    for attempt in range(100):
         if time.monotonic() >= deadline:
             metadata['constraint'] = 'overall_launch_budget_exhausted'
             break
