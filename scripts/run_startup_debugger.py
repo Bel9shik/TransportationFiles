@@ -21,9 +21,11 @@ for attempt in range(10):
         env = dict(os.environ, TRANSPORT_STARTUP_PROBE=str(marker), TRANSPORT_READY_PROBE=str(ready), PROBE_SUMMARY=str(summary))
         with (root / 'lldb.log').open('w') as log:
             debugger = subprocess.Popen(['lldb', '--batch', '-o', 'settings set auto-confirm true',
-                '-o', f'command script import {script}', '-o', 'run',
+                '-o', f'command script import {script}',
+                '-k', 'script probe_startup_lldb.snapshot(lldb.debugger)', '-k', 'process kill', '-k', 'quit',
+                '-o', 'run',
                 '-o', 'script probe_startup_lldb.snapshot(lldb.debugger)', '-o', 'process kill', '-o', 'quit',
-                '--', os.environ['PROBE_EXECUTABLE']], cwd=root, env=env, stdout=log, stderr=log)
+                '--', os.environ['PROBE_EXECUTABLE']], cwd=root, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log)
             pid = None
             success = False
             try:
@@ -32,6 +34,13 @@ for attempt in range(10):
                     text = (root / 'lldb.log').read_text(errors='replace')
                     match = re.search(r'Process (\d+) launched:', text)
                     if match: pid = int(match[1])
+                    if marker.exists() and ready.exists() and not pid:
+                        processes = subprocess.check_output(['ps', '-axo', 'pid=,comm='], text=True)
+                        for row in processes.splitlines():
+                            parts = row.strip().split(None, 1)
+                            if len(parts) == 2 and Path(parts[1]).name == 'TransportationFiles':
+                                pid = int(parts[0])
+                                break
                     if marker.exists() and ready.exists() and pid:
                         success = True
                         os.kill(pid, signal.SIGTERM)
@@ -52,3 +61,6 @@ for attempt in range(10):
                 (out / 'debugger-runs.json').write_text(json.dumps(results, indent=2))
                 print(results[-1], flush=True)
         if not success: break
+
+if not results or not all(item['ready'] for item in results):
+    raise SystemExit('Native startup failed; see function-only summaries')

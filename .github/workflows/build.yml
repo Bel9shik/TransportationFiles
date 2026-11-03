@@ -14,15 +14,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh run download 41418535620 -n TransportationFiles-Native-macOS-X64 -D probe-artifact
-      - name: Repeated startup with native thread sampling on failure
+      - name: Capture native startup with bounded function-only summaries
+        timeout-minutes: 4
         run: |
           mkdir probe-package
           tar -xzf probe-artifact/TransportationFiles-macOS-X64.tar.gz -C probe-package
-          python3 scripts/measure_startup.py "$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles" --runs 20 --max-seconds 15 --require-ready --diagnostics-dir startup-diagnostics > probe-startup.json
-      - name: Capture only native function names in debugger
-        timeout-minutes: 3
-        if: failure()
-        run: |
           export PROBE_EXECUTABLE="$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles"
           python3 scripts/run_startup_debugger.py
       - uses: actions/upload-artifact@v4
