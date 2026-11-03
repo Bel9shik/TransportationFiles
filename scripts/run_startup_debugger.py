@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import sys
 import subprocess
 import tempfile
 import time
@@ -117,5 +118,131 @@ def main():
         raise SystemExit('Native startup failed; see safe debugger summaries')
 
 
+def core_main():
+    """Run only the ephemeral CI app normally; inspect its own crash offline."""
+    import resource
+
+    out = Path('startup-diagnostics').resolve()
+    out.mkdir(exist_ok=True)
+    report = out / 'core-runs.json'
+    metadata = {'mode': 'untraced_owned_process_core', 'runs': []}
+
+    def save():
+        report.write_text(json.dumps(metadata, indent=2))
+
+    save()
+    core_directory = Path('/cores')
+    soft, hard = resource.getrlimit(resource.RLIMIT_CORE)
+    metadata['core_directory_writable'] = os.access(core_directory, os.W_OK)
+    metadata['core_hard_limit_unlimited'] = hard == resource.RLIM_INFINITY
+    if not metadata['core_directory_writable'] or hard == 0:
+        metadata['constraint'] = 'core_directory_not_writable' if not metadata['core_directory_writable'] else 'core_hard_limit_zero'
+        save()
+        raise SystemExit('Core capture unavailable; see safe status summary')
+    try:
+        resource.setrlimit(resource.RLIMIT_CORE, (hard, hard))
+    except (OSError, ValueError):
+        metadata['constraint'] = 'process_core_limit_could_not_be_enabled'
+        save()
+        raise SystemExit('Core capture unavailable; see safe status summary')
+    metadata['process_core_limit_enabled'] = True
+    save()
+    deadline = time.monotonic() + 150
+    executable = str(Path(os.environ['PROBE_EXECUTABLE']).resolve(strict=True))
+    snapshot_script = Path('scripts/probe_startup_lldb.py').resolve()
+    for attempt in range(20):
+        if time.monotonic() >= deadline:
+            metadata['constraint'] = 'overall_launch_budget_exhausted'
+            break
+        with tempfile.TemporaryDirectory(prefix='transport-core-startup-') as directory:
+            root = Path(directory)
+            marker, ready = root / 'frame', root / 'ready'
+            environment = dict(os.environ, TRANSPORT_STARTUP_PROBE=str(marker), TRANSPORT_READY_PROBE=str(ready))
+            result = {'attempt': attempt + 1, 'ready': False, 'core_owned': False}
+            core = None
+            core_owned = False
+            started = time.monotonic()
+            with (root / 'app.log').open('w') as log:
+                process = subprocess.Popen([executable], cwd=root, env=environment,
+                                           stdin=subprocess.DEVNULL, stdout=log, stderr=log)
+                # Ownership is established only when this exact PID's core is absent.
+                # Never enumerate, read, modify or delete any preexisting core.
+                core = core_directory / f'core.{process.pid}'
+                core_owned = not core.exists()
+                result['core_owned'] = core_owned
+                try:
+                    launch_deadline = min(started + 15, deadline)
+                    while process.poll() is None and time.monotonic() < launch_deadline:
+                        if marker.exists() and ready.exists():
+                            result['ready'] = True
+                            break
+                        time.sleep(0.01)
+                    # Kernel core writing may delay process reaping. This grants
+                    # only the already-owned core a brief bounded completion wait.
+                    if not result['ready'] and core_owned and core.exists() and process.poll() is None:
+                        try:
+                            process.wait(timeout=15)
+                        except subprocess.TimeoutExpired:
+                            result['constraint'] = 'core_write_did_not_complete_in_budget'
+                    result['app_exit_status'] = process.poll()
+                    result['frame_marker'] = marker.exists()
+                    result['ready_marker'] = ready.exists()
+                    result['elapsed_seconds'] = round(time.monotonic() - started, 3)
+                    metadata['runs'].append(result)
+                    save()
+                    print(result, flush=True)
+                    if result['ready']:
+                        continue
+                    if not core_owned:
+                        result['constraint'] = 'core_ownership_not_established'
+                    elif process.poll() is None:
+                        result.setdefault('constraint', 'startup_deadline_without_process_exit')
+                    elif process.returncode >= 0:
+                        result['constraint'] = 'process_exited_without_crash_signal'
+                    elif not core.exists():
+                        result['constraint'] = 'own_process_exited_but_no_core_was_created'
+                    else:
+                        result['core_created'] = True
+                        summary = out / 'offline-core.json'
+                        debugger_environment = dict(os.environ, PROBE_SUMMARY=str(summary), PROBE_CORE_CAPTURE='1')
+                        with (root / 'offline-lldb.log').open('w') as debugger_log:
+                            command = ['lldb', '--no-lldbinit', '--no-use-colors', '--source-quietly', '--batch',
+                                '-O', 'settings set symbols.enable-external-lookup false',
+                                '-O', 'settings set -e symbols.auto-download off',
+                                '-O', f'command script import {snapshot_script}',
+                                '-o', 'script probe_startup_lldb.snapshot(lldb.debugger)',
+                                '--core', str(core), '--', executable]
+                            try:
+                                debugger = subprocess.run(command, cwd=root, env=debugger_environment,
+                                    stdin=subprocess.DEVNULL, stdout=debugger_log, stderr=debugger_log, timeout=40)
+                                result['offline_debugger_exit_status'] = debugger.returncode
+                            except subprocess.TimeoutExpired:
+                                result['constraint'] = 'offline_debugger_deadline'
+                        result.update(log_summary((root / 'offline-lldb.log').read_text(errors='replace')))
+                        result['summary_saved'] = summary.exists()
+                    save()
+                    break
+                finally:
+                    if process.poll() is None:
+                        process.terminate()
+                        try:
+                            process.wait(timeout=3)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            try:
+                                process.wait(timeout=3)
+                            except subprocess.TimeoutExpired:
+                                result['constraint'] = 'own_process_did_not_reap_after_kill'
+                    if core_owned and core is not None and core.exists():
+                        # This core belongs only to the Popen child from this
+                        # attempt. It never leaves the disposable runner.
+                        core.unlink()
+                        result['own_core_removed'] = True
+                    save()
+    save()
+    if not metadata['runs'] or not all(item['ready'] for item in metadata['runs']):
+        raise SystemExit('Untraced startup failed; see safe status/function summaries')
+
+
 if __name__ == '__main__':
-    main()
+    core_main() if '--core' in sys.argv else main()

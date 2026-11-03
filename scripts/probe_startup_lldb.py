@@ -28,7 +28,7 @@ def snapshot(debugger):
     for index in range(min(process.GetNumThreads(), 32)):
         thread = process.GetThreadAtIndex(index)
         reason = thread.GetStopReason()
-        if reason in (lldb.eStopReasonSignal, lldb.eStopReasonException):
+        if os.environ.get('PROBE_CORE_CAPTURE') == '1' or reason in (lldb.eStopReasonSignal, lldb.eStopReasonException):
             stopped = {'reason': reason, 'functions': []}
             if reason == lldb.eStopReasonSignal and thread.GetStopReasonDataCount():
                 stopped['signal'] = thread.GetStopReasonDataAtIndex(0)
