@@ -1,0 +1,72 @@
+{
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "warmups": 1,
+  "runs": 1,
+  "metric": "send call through receiver acknowledgement, seconds; separate processes; loopback; SHA256 and disk writes included; OS caches not cleared",
+  "cases": [
+    {
+      "implementation": "java",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        0.607980458
+      ],
+      "seconds": [
+        0.464142292
+      ],
+      "median_seconds": 0.464142292,
+      "min_seconds": 0.464142292,
+      "max_seconds": 0.464142292,
+      "MiB_per_second": 215.45117030619568,
+      "verified_files": 2
+    },
+    {
+      "implementation": "dart_aot",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        10.6649
+      ],
+      "seconds": [
+        6.696645
+      ],
+      "median_seconds": 6.696645,
+      "min_seconds": 6.696645,
+      "max_seconds": 6.696645,
+      "MiB_per_second": 14.932850703598593,
+      "verified_files": 2
+    },
+    {
+      "implementation": "dart_aot",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.725783
+      ],
+      "seconds": [
+        0.716231
+      ],
+      "median_seconds": 0.716231,
+      "min_seconds": 0.716231,
+      "max_seconds": 0.716231,
+      "MiB_per_second": 27.923951909370025,
+      "verified_files": 40
+    },
+    {
+      "implementation": "java",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.22911925
+      ],
+      "seconds": [
+        0.107519125
+      ],
+      "median_seconds": 0.107519125,
+      "min_seconds": 0.107519125,
+      "max_seconds": 0.107519125,
+      "MiB_per_second": 186.01341854298016,
+      "verified_files": 40
+    }
+  ]
+}

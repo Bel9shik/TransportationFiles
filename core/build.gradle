@@ -14,3 +14,16 @@ tasks.register('interopDesktop', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'kardash.project.transfer.DesktopInterop'
 }
+
+tasks.register('flutterInterop', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'kardash.project.transfer.FlutterInterop'
+}
+
+tasks.register('prepareTransferBenchmark') {
+    dependsOn testClasses, sourceSets.test.runtimeClasspath
+    doLast {
+        layout.buildDirectory.file('benchmark-classpath.txt').get().asFile.text = sourceSets.test.runtimeClasspath.asPath
+    }
+}

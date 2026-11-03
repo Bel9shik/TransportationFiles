@@ -1,0 +1,96 @@
+{
+  "commit": "ea6b8a4",
+  "run": "https://github.com/Bel9shik/TransportationFiles/actions/runs/41415993059",
+  "warmups": 3,
+  "runs": 5,
+  "cases": [
+    {
+      "implementation": "java",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        1.8698231,
+        1.4015308,
+        1.0302912
+      ],
+      "seconds": [
+        0.6154432,
+        0.5318472,
+        0.4948981,
+        0.5096732,
+        0.5043309
+      ],
+      "median_seconds": 0.5096732,
+      "min_seconds": 0.4948981,
+      "max_seconds": 0.6154432,
+      "MiB_per_second": 196.20415591794898,
+      "verified_files": 8
+    },
+    {
+      "implementation": "dart_aot",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        0.765592,
+        0.694481,
+        0.703282
+      ],
+      "seconds": [
+        0.702685,
+        0.696314,
+        0.679509,
+        0.678685,
+        0.665175
+      ],
+      "median_seconds": 0.679509,
+      "min_seconds": 0.665175,
+      "max_seconds": 0.702685,
+      "MiB_per_second": 147.16508537782428,
+      "verified_files": 8
+    },
+    {
+      "implementation": "dart_aot",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.250194,
+        0.335706,
+        0.292759
+      ],
+      "seconds": [
+        0.384104,
+        0.261872,
+        0.232606,
+        0.645642,
+        0.651127
+      ],
+      "median_seconds": 0.384104,
+      "min_seconds": 0.232606,
+      "max_seconds": 0.651127,
+      "MiB_per_second": 52.06923124986983,
+      "verified_files": 160
+    },
+    {
+      "implementation": "java",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        1.0536361,
+        0.4650676,
+        0.3104196
+      ],
+      "seconds": [
+        0.3512742,
+        0.2847895,
+        0.2739375,
+        0.3045288,
+        0.2586531
+      ],
+      "median_seconds": 0.2847895,
+      "min_seconds": 0.2586531,
+      "max_seconds": 0.3512742,
+      "MiB_per_second": 70.22730823994566,
+      "verified_files": 160
+    }
+  ]
+}

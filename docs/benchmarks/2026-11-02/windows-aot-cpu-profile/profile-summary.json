@@ -1,0 +1,2537 @@
+{
+  "purpose": "CPU diagnosis only; profiler changes timings; not a throughput comparison",
+  "source_commit": "c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85",
+  "parser": "perfetto==0.59.1",
+  "sampling_interval_microseconds": 1000,
+  "counts": "Samples, not durations. Cumulative counts may include recursive/multiple frames.",
+  "attribution": "Observed _readFiles/TransferSender stack frames only; async boundaries leave other samples unattributed. Thread names are not isolate identities.",
+  "privacy": "Whitelisted function/module/thread names and counts only. No addresses, absolute paths, raw CPU trace, heap or core.",
+  "profiles": [
+    {
+      "scenario": "100MiB",
+      "trace_bytes": 2121042,
+      "samples": 300,
+      "threads": [
+        {
+          "name": "DartWorker",
+          "samples": 300
+        }
+      ],
+      "observed_stack_attribution": {
+        "worker": 81,
+        "sender": 19,
+        "overlap": 0,
+        "unattributed": 200
+      },
+      "top_functions": [
+        {
+          "function": "_NativeSocket._nativeWrite",
+          "module": "profile_benchmark.exe",
+          "self_count": 78,
+          "cumulative_count": 78
+        },
+        {
+          "function": "EVP_DigestUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 61,
+          "cumulative_count": 122
+        },
+        {
+          "function": "_RandomAccessFileOpsImpl.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 60,
+          "cumulative_count": 60
+        },
+        {
+          "function": "[Stub] AllocateUint8Array",
+          "module": "profile_benchmark.exe",
+          "self_count": 29,
+          "cumulative_count": 29
+        },
+        {
+          "function": "_TypedListBase._setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 25,
+          "cumulative_count": 25
+        },
+        {
+          "function": "new _TransferableTypedDataImpl",
+          "module": "profile_benchmark.exe",
+          "self_count": 21,
+          "cumulative_count": 21
+        },
+        {
+          "function": "[unknown or redacted]",
+          "module": "[unknown]",
+          "self_count": 5,
+          "cumulative_count": 5
+        },
+        {
+          "function": "[Stub] StackOverflowSharedWithoutFPURegs",
+          "module": "profile_benchmark.exe",
+          "self_count": 3,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_Closure.call",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 159
+        },
+        {
+          "function": "_NativeSocket._nativeRead",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_SendPort._sendInternal",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_streamToUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 73
+        },
+        {
+          "function": "FrameWriter._writeDataFrameNoFragment",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 4
+        },
+        {
+          "function": "_DigestBytes.take",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 3
+        },
+        {
+          "function": "List.isEmpty",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ListQueue.addFirst",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] AllocateContext",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] AllocateObjectParameterized",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] InstanceOf",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_DelayedEvent.next",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_TypedList.buffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_httpConnectionHook.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "new Uint8List.sublistView",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_BufferingStreamSubscription._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 325
+        },
+        {
+          "function": "_RootZone.runUnaryGuarded",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 325
+        },
+        {
+          "function": "_StreamController._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 307
+        },
+        {
+          "function": "_RawReceivePort._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 295
+        },
+        {
+          "function": "_startMicrotaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 272
+        },
+        {
+          "function": "_StreamIterator._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 268
+        },
+        {
+          "function": "_BufferingStreamSubscription._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 235
+        },
+        {
+          "function": "_SyncStreamControllerDispatch._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 234
+        },
+        {
+          "function": "_StreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 222
+        },
+        {
+          "function": "_RootZone.runUnary",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 197
+        },
+        {
+          "function": "_SuspendState._createAsyncStarCallback.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 197
+        },
+        {
+          "function": "Future._propagateToListeners",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 196
+        },
+        {
+          "function": "Future._propagateToListeners.handleValueCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 195
+        },
+        {
+          "function": "_FutureListener.handleValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 195
+        },
+        {
+          "function": "_microtaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 136
+        },
+        {
+          "function": "_runPendingImmediateCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 136
+        },
+        {
+          "function": "Future._complete",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 135
+        },
+        {
+          "function": "_Socket._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 120
+        },
+        {
+          "function": "_NativeSocket.multiplex",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 116
+        },
+        {
+          "function": "_PendingEvents.schedule.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 92
+        },
+        {
+          "function": "_DelayedData.perform",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 90
+        },
+        {
+          "function": "_PendingEvents.handleNext",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 90
+        },
+        {
+          "function": "_readFiles",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 81
+        },
+        {
+          "function": "_SocketStreamConsumer.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 79
+        },
+        {
+          "function": "_NativeSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 78
+        },
+        {
+          "function": "_RawSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 78
+        },
+        {
+          "function": "_Socket._write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 78
+        },
+        {
+          "function": "_Timer._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 76
+        },
+        {
+          "function": "Future._completeWithValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 61
+        },
+        {
+          "function": "_ForwardingStreamSubscription._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 60
+        },
+        {
+          "function": "_RandomAccessFile.readSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 60
+        },
+        {
+          "function": "new _RawSocket.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 60
+        },
+        {
+          "function": "_NativeSocket.issueWriteEvent",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 58
+        },
+        {
+          "function": "_NativeSocket.issueWriteEvent.issue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 58
+        },
+        {
+          "function": "Future._asyncCompleteWithValue.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 40
+        },
+        {
+          "function": "Timer._createTimer.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 38
+        },
+        {
+          "function": "_Timer._runTimers",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 38
+        },
+        {
+          "function": "coalesceSocketWrites.flush",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 37
+        },
+        {
+          "function": "_MapStream._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 30
+        },
+        {
+          "function": "_IntListMixin.setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 25
+        },
+        {
+          "function": "[Stub] ReturnAsyncNotFuture",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 21
+        },
+        {
+          "function": "_SocketStreamConsumer.addStream.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 21
+        },
+        {
+          "function": "_SuspendState._returnAsyncNotFuture",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 21
+        },
+        {
+          "function": "new TransferableTypedData.fromList",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 21
+        },
+        {
+          "function": "new _PartReply",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 21
+        },
+        {
+          "function": "new Uint8List",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 20
+        },
+        {
+          "function": "ClientCall._sendRequest.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "FileChunk.transferToken=",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "FileTransferServiceClient._$sendFile.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "GeneratedMessage.writeToBuffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "TransferSender._chunks",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "_AsyncStarStreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "new FileChunk",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "CodedBufferWriter.toBuffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 16
+        },
+        {
+          "function": "_BytesBuilder.takeBytes",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 15
+        },
+        {
+          "function": "new Http2TransportStream.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 11
+        },
+        {
+          "function": "_IntListMixin.setAll",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "frame",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "StreamHandler._handleNewOutgoingMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "StreamHandler._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "StreamHandler._setupOutgoingMessageHandling.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "StreamMessageQueueOut.enqueueMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "_ControllerSubscription._onResume",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "CodedBufferWriter.writeTo",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessages",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "FrameWriter.writeDataFrame",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "StreamMessageQueueOut._trySendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "ClosableMixin.ensureNotClosingSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "_BufferingStreamSubscription._guardCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_BufferingStreamSubscription.resume",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_StreamController._recordResume",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_runGuarded",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "BufferIndicator.markUnBuffered",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "PreparedFileSource.readFile",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        }
+      ]
+    },
+    {
+      "scenario": "100MiB",
+      "trace_bytes": 275309,
+      "samples": 428,
+      "threads": [
+        {
+          "name": "DartWorker",
+          "samples": 428
+        }
+      ],
+      "observed_stack_attribution": {
+        "worker": 97,
+        "sender": 16,
+        "overlap": 0,
+        "unattributed": 315
+      },
+      "top_functions": [
+        {
+          "function": "_NativeSocket._nativeWrite",
+          "module": "profile_benchmark.exe",
+          "self_count": 121,
+          "cumulative_count": 121
+        },
+        {
+          "function": "EVP_DigestUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 80,
+          "cumulative_count": 160
+        },
+        {
+          "function": "_RandomAccessFileOpsImpl.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 64,
+          "cumulative_count": 64
+        },
+        {
+          "function": "new _TransferableTypedDataImpl",
+          "module": "profile_benchmark.exe",
+          "self_count": 27,
+          "cumulative_count": 27
+        },
+        {
+          "function": "[Stub] AllocateUint8Array",
+          "module": "profile_benchmark.exe",
+          "self_count": 26,
+          "cumulative_count": 26
+        },
+        {
+          "function": "_NativeSocket._nativeRead",
+          "module": "profile_benchmark.exe",
+          "self_count": 24,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_TypedListBase._setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 19,
+          "cumulative_count": 19
+        },
+        {
+          "function": "_SendPort._sendInternal",
+          "module": "profile_benchmark.exe",
+          "self_count": 7,
+          "cumulative_count": 7
+        },
+        {
+          "function": "_EventHandler._timerMillisecondClock",
+          "module": "profile_benchmark.exe",
+          "self_count": 6,
+          "cumulative_count": 10
+        },
+        {
+          "function": "[unknown or redacted]",
+          "module": "[unknown]",
+          "self_count": 6,
+          "cumulative_count": 6
+        },
+        {
+          "function": "[unknown or redacted]",
+          "module": "profile_benchmark.exe",
+          "self_count": 5,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_EventHandler._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 4,
+          "cumulative_count": 4
+        },
+        {
+          "function": "[Stub] AllocateObjectParameterized",
+          "module": "profile_benchmark.exe",
+          "self_count": 3,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_NativeSocket._nativeAvailable",
+          "module": "profile_benchmark.exe",
+          "self_count": 3,
+          "cumulative_count": 3
+        },
+        {
+          "function": "[Stub] Subtype3TestCache",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_RootZone.runUnaryGuarded",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 478
+        },
+        {
+          "function": "_RawReceivePort._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 422
+        },
+        {
+          "function": "_startMicrotaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 416
+        },
+        {
+          "function": "_PendingEvents.schedule.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 129
+        },
+        {
+          "function": "_DelayedData.perform",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 127
+        },
+        {
+          "function": "Timer._createTimer.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 119
+        },
+        {
+          "function": "_SocketStreamConsumer.addStream.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 112
+        },
+        {
+          "function": "FrameWriter.writeDataFrame",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 24
+        },
+        {
+          "function": "StreamMessageQueueOut._trySendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 19
+        },
+        {
+          "function": "FrameWriter._writeData",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_BufferingStreamSubscription.resume",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 4
+        },
+        {
+          "function": "PreparedFileSource.readFile",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_DigestBytes.skip",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_StreamController._recordResume",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 3
+        },
+        {
+          "function": "new _Uint8ArrayView._",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 2
+        },
+        {
+          "function": "EmptyIterable.fold",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "FileChunk.info_",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "FrameReader._readFrame",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "List._growToNextCapacity",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "OperationError.toString",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] AllocateObjectSlow",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] Resume",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] SlowTypeTest",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] YieldAsyncStar",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_NativeSocket._nativeHasPendingWrite",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_NativeSocket.issueReadEvent",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_OperatorEqualsAndHashCode._hashCode",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_PendingEvents.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_rangeCheck",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "new _BufferingStreamSubscription.zoned",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "new _ByteDataView._",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_BufferingStreamSubscription._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 478
+        },
+        {
+          "function": "_StreamController._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 422
+        },
+        {
+          "function": "_BufferingStreamSubscription._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 352
+        },
+        {
+          "function": "_SyncStreamControllerDispatch._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 332
+        },
+        {
+          "function": "_StreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 312
+        },
+        {
+          "function": "_StreamIterator._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 312
+        },
+        {
+          "function": "_Timer._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 246
+        },
+        {
+          "function": "_SuspendState._createAsyncStarCallback.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 237
+        },
+        {
+          "function": "_RootZone.runUnary",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 235
+        },
+        {
+          "function": "Future._propagateToListeners",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 233
+        },
+        {
+          "function": "Future._propagateToListeners.handleValueCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 233
+        },
+        {
+          "function": "_FutureListener.handleValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 233
+        },
+        {
+          "function": "_Closure.call",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 212
+        },
+        {
+          "function": "_runPendingImmediateCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 208
+        },
+        {
+          "function": "_microtaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 207
+        },
+        {
+          "function": "Future._complete",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 156
+        },
+        {
+          "function": "_PendingEvents.handleNext",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 128
+        },
+        {
+          "function": "_SocketStreamConsumer.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 123
+        },
+        {
+          "function": "_Timer._runTimers",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 122
+        },
+        {
+          "function": "_NativeSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 121
+        },
+        {
+          "function": "_RawSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 121
+        },
+        {
+          "function": "_Socket._write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 121
+        },
+        {
+          "function": "coalesceSocketWrites.flush",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 118
+        },
+        {
+          "function": "_readFiles",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 97
+        },
+        {
+          "function": "_streamToUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 89
+        },
+        {
+          "function": "Future._completeWithValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 77
+        },
+        {
+          "function": "_Socket._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 76
+        },
+        {
+          "function": "_RandomAccessFile.readSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 64
+        },
+        {
+          "function": "_ForwardingStreamSubscription._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 50
+        },
+        {
+          "function": "Future._asyncCompleteWithValue.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 47
+        },
+        {
+          "function": "_NativeSocket.multiplex",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 44
+        },
+        {
+          "function": "new _RawSocket.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 41
+        },
+        {
+          "function": "[Stub] ReturnAsyncNotFuture",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 30
+        },
+        {
+          "function": "_SuspendState._returnAsyncNotFuture",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 30
+        },
+        {
+          "function": "_NativeSocket.issueReadEvent.issue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 27
+        },
+        {
+          "function": "new TransferableTypedData.fromList",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 27
+        },
+        {
+          "function": "new _PartReply",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 27
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessages",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 25
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_MapStream._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_NativeSocket.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_RawSocket.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "FrameWriter._writeDataFrameNoFragment",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "_IntListMixin.setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "ClosableMixin.ensureNotClosingSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "Connection._catchProtocolErrors",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "Connection._handleFrameImpl",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "Connection._setupConnection.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "Connection._setupConnection.<anonymous closure>.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "AbstractOutgoingWindowHandler.processWindowUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 17
+        },
+        {
+          "function": "BufferIndicator.markUnBuffered",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 17
+        },
+        {
+          "function": "_BroadcastStreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 17
+        }
+      ]
+    },
+    {
+      "scenario": "20x1MiB",
+      "trace_bytes": 81809,
+      "samples": 84,
+      "threads": [
+        {
+          "name": "DartWorker",
+          "samples": 84
+        }
+      ],
+      "observed_stack_attribution": {
+        "worker": 0,
+        "sender": 7,
+        "overlap": 0,
+        "unattributed": 77
+      },
+      "top_functions": [
+        {
+          "function": "_NativeSocket._nativeWrite",
+          "module": "profile_benchmark.exe",
+          "self_count": 29,
+          "cumulative_count": 29
+        },
+        {
+          "function": "EVP_DigestUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 22,
+          "cumulative_count": 44
+        },
+        {
+          "function": "_TypedListBase._setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 6,
+          "cumulative_count": 6
+        },
+        {
+          "function": "_NativeSocket._nativeRead",
+          "module": "profile_benchmark.exe",
+          "self_count": 5,
+          "cumulative_count": 5
+        },
+        {
+          "function": "[Stub] AllocateUint8Array",
+          "module": "profile_benchmark.exe",
+          "self_count": 3,
+          "cumulative_count": 3
+        },
+        {
+          "function": "[Stub] AllocateClosure1",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_SendPort._sendInternal",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_StreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 37
+        },
+        {
+          "function": "_SuspendState._createAsyncStarCallback.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 36
+        },
+        {
+          "function": "Connection._setupConnection.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 4
+        },
+        {
+          "function": "EVP_MD_CTX_new",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 2
+        },
+        {
+          "function": "DateTime._timeZoneOffsetInSecondsForClampedSeconds",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] AllocateObjectSlow",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] InstantiateTypeArguments",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] Subtype3TestCache",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[unknown or redacted]",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_ByteBuffer.lengthInBytes",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_NativeSocket._nativeAvailable",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_NativeSocket._nativeCreateConnect",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_OperatorEqualsAndHashCode._hashCode",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_scheduleAsyncCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "int.==",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_BufferingStreamSubscription._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 104
+        },
+        {
+          "function": "_RootZone.runUnaryGuarded",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 104
+        },
+        {
+          "function": "_startMicrotaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 100
+        },
+        {
+          "function": "_StreamController._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 90
+        },
+        {
+          "function": "_RawReceivePort._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 83
+        },
+        {
+          "function": "_BufferingStreamSubscription._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 68
+        },
+        {
+          "function": "_SyncStreamControllerDispatch._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 63
+        },
+        {
+          "function": "_Timer._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 56
+        },
+        {
+          "function": "_StreamIterator._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 54
+        },
+        {
+          "function": "_microtaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 50
+        },
+        {
+          "function": "_runPendingImmediateCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 50
+        },
+        {
+          "function": "_DelayedData.perform",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 36
+        },
+        {
+          "function": "_PendingEvents.handleNext",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 36
+        },
+        {
+          "function": "_PendingEvents.schedule.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 36
+        },
+        {
+          "function": "Future._propagateToListeners",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 34
+        },
+        {
+          "function": "Future._propagateToListeners.handleValueCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 34
+        },
+        {
+          "function": "_FutureListener.handleValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 34
+        },
+        {
+          "function": "_RootZone.runUnary",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 34
+        },
+        {
+          "function": "_Closure.call",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 31
+        },
+        {
+          "function": "_NativeSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 29
+        },
+        {
+          "function": "_RawSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 29
+        },
+        {
+          "function": "_Socket._write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 29
+        },
+        {
+          "function": "_SocketStreamConsumer.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 29
+        },
+        {
+          "function": "Future._complete",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 28
+        },
+        {
+          "function": "Timer._createTimer.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 28
+        },
+        {
+          "function": "_Timer._runTimers",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 28
+        },
+        {
+          "function": "_SocketStreamConsumer.addStream.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 27
+        },
+        {
+          "function": "_streamToUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 27
+        },
+        {
+          "function": "coalesceSocketWrites.flush",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 27
+        },
+        {
+          "function": "_Socket._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "_ForwardingStreamSubscription._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 10
+        },
+        {
+          "function": "_AsyncStarStreamController.runBody",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 8
+        },
+        {
+          "function": "TransferSender._chunks",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "new _RawSocket.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "Future._completeWithValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "_IntListMixin.setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "_NativeSocket.multiplex",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "Future._asyncCompleteWithValue.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_NativeSocket.issueReadEvent.issue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_NativeSocket.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_RawSocket.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_IntListMixin.setAll",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "_MapStream._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "AbstractOutgoingWindowHandler.processWindowUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "BufferIndicator.markUnBuffered",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "Connection._catchProtocolErrors",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "Connection._handleFrameImpl",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "Connection._setupConnection.<anonymous closure>.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessages",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "FrameWriter._writeDataFrameNoFragment",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "FrameWriter.writeDataFrame",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "TerminatableMixin.ensureNotTerminatedSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_BroadcastStreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_SyncBroadcastStreamController._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 3
+        },
+        {
+          "function": "Http2ClientConnection.dispatchCall",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_AsyncStarStreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_ByteBuffer.asUint8List",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_ForwardingStreamSubscription._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_IOService._dispatch",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_NativeSocket.issueWriteEvent",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_NativeSocket.issueWriteEvent.issue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_RandomAccessFile._dispatch",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_RandomAccessFile.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_SendPort.send",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_StreamSinkWrapper.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "new ConnectionMessageQueueOut.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "new Uint8List",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "ClientCall._sendRequest",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ClientCall._sendRequest.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ClientCall.onConnectionReady",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ClientConnection.makeRequest",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ClosableMixin.ensureNotClosingSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter.toBuffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter.writeTo",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "DateTime._localDateInUtcMicros",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        }
+      ]
+    },
+    {
+      "scenario": "20x1MiB",
+      "trace_bytes": 391556,
+      "samples": 47,
+      "threads": [
+        {
+          "name": "DartWorker",
+          "samples": 47
+        }
+      ],
+      "observed_stack_attribution": {
+        "worker": 0,
+        "sender": 8,
+        "overlap": 0,
+        "unattributed": 39
+      },
+      "top_functions": [
+        {
+          "function": "_NativeSocket._nativeWrite",
+          "module": "profile_benchmark.exe",
+          "self_count": 14,
+          "cumulative_count": 14
+        },
+        {
+          "function": "EVP_DigestUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 11,
+          "cumulative_count": 22
+        },
+        {
+          "function": "_TypedListBase._setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 5,
+          "cumulative_count": 5
+        },
+        {
+          "function": "[Stub] AllocateUint8Array",
+          "module": "profile_benchmark.exe",
+          "self_count": 3,
+          "cumulative_count": 3
+        },
+        {
+          "function": "_NativeSocket._nativeRead",
+          "module": "profile_benchmark.exe",
+          "self_count": 2,
+          "cumulative_count": 2
+        },
+        {
+          "function": "Future._propagateToListeners",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 27
+        },
+        {
+          "function": "List._grow",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "StreamingDigest._input",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "Timer._createTimer",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] AllocateObject",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] InstantiateTypeArguments",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "[Stub] SlowTypeTest",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_BufferingStreamSubscription._registerErrorHandler",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_SendPort._sendInternal",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_TypedList.lengthInBytes",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_Utf8Encoder._fillBuffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "new List.from",
+          "module": "profile_benchmark.exe",
+          "self_count": 1,
+          "cumulative_count": 1
+        },
+        {
+          "function": "_startMicrotaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 56
+        },
+        {
+          "function": "_BufferingStreamSubscription._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 54
+        },
+        {
+          "function": "_RootZone.runUnaryGuarded",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 54
+        },
+        {
+          "function": "_StreamController._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 50
+        },
+        {
+          "function": "_RawReceivePort._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 47
+        },
+        {
+          "function": "_BufferingStreamSubscription._add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 38
+        },
+        {
+          "function": "_SyncStreamControllerDispatch._sendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 37
+        },
+        {
+          "function": "_microtaskLoop",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 28
+        },
+        {
+          "function": "_runPendingImmediateCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 28
+        },
+        {
+          "function": "_StreamIterator._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 26
+        },
+        {
+          "function": "Future._propagateToListeners.handleValueCallback",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 25
+        },
+        {
+          "function": "_FutureListener.handleValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 25
+        },
+        {
+          "function": "_RootZone.runUnary",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_StreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_Timer._handleMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 24
+        },
+        {
+          "function": "_SuspendState._createAsyncStarCallback.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 22
+        },
+        {
+          "function": "_Closure.call",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 19
+        },
+        {
+          "function": "_Socket._onData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 18
+        },
+        {
+          "function": "_DelayedData.perform",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 16
+        },
+        {
+          "function": "_PendingEvents.handleNext",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 16
+        },
+        {
+          "function": "_PendingEvents.schedule.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 16
+        },
+        {
+          "function": "Future._complete",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 15
+        },
+        {
+          "function": "_NativeSocket.multiplex",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "_NativeSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "_RawSocket.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "_Socket._write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "_SocketStreamConsumer.write",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "_streamToUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 14
+        },
+        {
+          "function": "Timer._createTimer.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 12
+        },
+        {
+          "function": "_Timer._runTimers",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 12
+        },
+        {
+          "function": "Future._completeWithValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 11
+        },
+        {
+          "function": "coalesceSocketWrites.flush",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 11
+        },
+        {
+          "function": "_ForwardingStreamSubscription._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 10
+        },
+        {
+          "function": "new _RawSocket.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 9
+        },
+        {
+          "function": "Future._asyncCompleteWithValue.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 8
+        },
+        {
+          "function": "_NativeSocket.issueWriteEvent",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "_NativeSocket.issueWriteEvent.issue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "_SocketStreamConsumer.addStream.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 7
+        },
+        {
+          "function": "TransferSender._chunks",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 6
+        },
+        {
+          "function": "_IntListMixin.setRange",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "_MapStream._handleData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 5
+        },
+        {
+          "function": "ClientCall._sendRequest.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "FileTransferServiceClient._$sendFile.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "GeneratedMessage.writeToBuffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "_AsyncStarStreamController.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "_BytesBuilder.takeBytes",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "new FileChunk",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 4
+        },
+        {
+          "function": "BufferedBytesWriter.add",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "ClosableMixin.ensureNotClosingSync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "ConnectionMessageQueueOut._trySendMessages",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "ConnectionMessageQueueOut.enqueueMessage.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "FrameWriter._writeData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "FrameWriter._writeDataFrameNoFragment",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "FrameWriter.writeDataFrame",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "Future._addListener.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "Future.wait.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "StreamMessageQueueOut._trySendData",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "TransferSender._send",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_DigestBytes.skip",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_NativeSocket.issueReadEvent.issue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_NativeSocket.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "_RawSocket.read",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "coalesceSocketWrites.<anonymous closure>.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "coalesceWindowUpdates.<anonymous closure>.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "new Future.sync",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "new StreamingDigest",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "new StreamingDigest.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 2
+        },
+        {
+          "function": "AbstractOutgoingWindowHandler.processWindowUpdate",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "BufferIndicator.markUnBuffered",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CallOptions.mergedWith",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "Client.$createStreamingCall",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter._writeValue",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter._writeValueAs",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter.toBuffer",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter.writeField",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "CodedBufferWriter.writeTo",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "Connection._catchProtocolErrors",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "Connection._handleFrameImpl",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "Connection._setupConnection.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "Connection._setupConnection.<anonymous closure>.<anonymous closure>",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        },
+        {
+          "function": "FileStat._stat",
+          "module": "profile_benchmark.exe",
+          "self_count": 0,
+          "cumulative_count": 1
+        }
+      ]
+    }
+  ],
+  "verified_transfer_cases": [
+    {
+      "scenario": "100MiB",
+      "implementation": "java",
+      "bytes": 104857600,
+      "verified_files": 18
+    },
+    {
+      "scenario": "100MiB",
+      "implementation": "dart_aot",
+      "bytes": 104857600,
+      "verified_files": 18
+    },
+    {
+      "scenario": "100MiB",
+      "implementation": "java_to_dart",
+      "bytes": 104857600,
+      "verified_files": 18
+    },
+    {
+      "scenario": "100MiB",
+      "implementation": "dart_to_java",
+      "bytes": 104857600,
+      "verified_files": 18
+    },
+    {
+      "scenario": "20x1MiB",
+      "implementation": "dart_to_java",
+      "bytes": 20971520,
+      "verified_files": 360
+    },
+    {
+      "scenario": "20x1MiB",
+      "implementation": "java_to_dart",
+      "bytes": 20971520,
+      "verified_files": 360
+    },
+    {
+      "scenario": "20x1MiB",
+      "implementation": "dart_aot",
+      "bytes": 20971520,
+      "verified_files": 360
+    },
+    {
+      "scenario": "20x1MiB",
+      "implementation": "java",
+      "bytes": 20971520,
+      "verified_files": 360
+    }
+  ]
+}

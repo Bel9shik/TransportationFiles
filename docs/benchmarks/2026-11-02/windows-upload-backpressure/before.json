@@ -1,0 +1,216 @@
+{
+  "platform": "Windows-2025Server-10.0.26100-SP0",
+  "warmups": 3,
+  "runs": 9,
+  "metric": "send call through receiver acknowledgement, seconds; separate processes; loopback; SHA256 and disk writes included; OS caches not cleared",
+  "cases": [
+    {
+      "implementation": "java",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        1.7572681,
+        1.562890801,
+        1.074131901
+      ],
+      "seconds": [
+        1.053044,
+        0.567779501,
+        1.1562849,
+        0.9367809,
+        0.5193303,
+        0.9650783,
+        0.499341301,
+        1.0248088,
+        0.4937495
+      ],
+      "median_seconds": 0.9367809,
+      "min_seconds": 0.4937495,
+      "max_seconds": 1.1562849,
+      "MiB_per_second": 106.74854707221293,
+      "verified_files": 12
+    },
+    {
+      "implementation": "dart_aot",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        0.847672,
+        0.757425,
+        0.772012
+      ],
+      "seconds": [
+        0.783106,
+        0.798466,
+        0.760365,
+        0.736007,
+        0.765274,
+        0.744998,
+        0.776102,
+        0.769291,
+        0.767945
+      ],
+      "median_seconds": 0.767945,
+      "min_seconds": 0.736007,
+      "max_seconds": 0.798466,
+      "MiB_per_second": 130.21765881671215,
+      "verified_files": 12
+    },
+    {
+      "implementation": "java_to_dart",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        0.9909874,
+        0.619937499,
+        0.5893036
+      ],
+      "seconds": [
+        0.6591025,
+        0.636211199,
+        0.5647031,
+        0.578962001,
+        0.5674199,
+        0.5662447,
+        0.565496001,
+        0.5556199,
+        0.577884101
+      ],
+      "median_seconds": 0.5674199,
+      "min_seconds": 0.5556199,
+      "max_seconds": 0.6591025,
+      "MiB_per_second": 176.2363286870975,
+      "verified_files": 12
+    },
+    {
+      "implementation": "dart_to_java",
+      "scenario": "100MiB",
+      "bytes": 104857600,
+      "warmup_seconds": [
+        1.358365,
+        0.927522,
+        0.861779
+      ],
+      "seconds": [
+        0.851641,
+        0.825436,
+        0.836673,
+        0.829409,
+        0.852402,
+        0.815417,
+        0.821302,
+        0.818445,
+        0.814809
+      ],
+      "median_seconds": 0.825436,
+      "min_seconds": 0.814809,
+      "max_seconds": 0.852402,
+      "MiB_per_second": 121.14809627881509,
+      "verified_files": 12
+    },
+    {
+      "implementation": "dart_to_java",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.570061,
+        0.302457,
+        0.245144
+      ],
+      "seconds": [
+        0.248072,
+        0.202569,
+        0.211168,
+        0.213972,
+        0.245604,
+        0.204457,
+        0.192447,
+        0.197422,
+        0.191292
+      ],
+      "median_seconds": 0.204457,
+      "min_seconds": 0.191292,
+      "max_seconds": 0.248072,
+      "MiB_per_second": 97.82007952772466,
+      "verified_files": 240
+    },
+    {
+      "implementation": "java_to_dart",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.4486956,
+        0.1641488,
+        0.1473758
+      ],
+      "seconds": [
+        0.1370854,
+        0.1518437,
+        0.1369752,
+        0.1302741,
+        0.1404026,
+        0.1420566,
+        0.1340497,
+        0.1358014,
+        0.1343064
+      ],
+      "median_seconds": 0.1369752,
+      "min_seconds": 0.1302741,
+      "max_seconds": 0.1518437,
+      "MiB_per_second": 146.01183279893004,
+      "verified_files": 240
+    },
+    {
+      "implementation": "dart_aot",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.189287,
+        0.158359,
+        0.145005
+      ],
+      "seconds": [
+        0.150081,
+        0.205078,
+        0.148171,
+        0.156362,
+        0.14502,
+        0.15675,
+        0.155912,
+        0.15707,
+        0.154878
+      ],
+      "median_seconds": 0.155912,
+      "min_seconds": 0.14502,
+      "max_seconds": 0.205078,
+      "MiB_per_second": 128.2774898660783,
+      "verified_files": 240
+    },
+    {
+      "implementation": "java",
+      "scenario": "20x1MiB",
+      "bytes": 20971520,
+      "warmup_seconds": [
+        0.8646268,
+        0.2925928,
+        0.2266729
+      ],
+      "seconds": [
+        0.3567521,
+        0.1508107,
+        0.1957702,
+        0.1979989,
+        0.2172289,
+        0.1416676,
+        0.1332778,
+        0.134491,
+        0.129196
+      ],
+      "median_seconds": 0.1508107,
+      "min_seconds": 0.129196,
+      "max_seconds": 0.3567521,
+      "MiB_per_second": 132.6165848974907,
+      "verified_files": 240
+    }
+  ]
+}
