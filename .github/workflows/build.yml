@@ -7,7 +7,7 @@ permissions:
 jobs:
   startup:
     runs-on: macos-15-intel
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Download previously validated Intel package

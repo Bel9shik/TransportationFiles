@@ -2,21 +2,48 @@
 import json
 import os
 from pathlib import Path
+import re
 import lldb
 
 
+def safe_symbol(value):
+    if value is None:
+        return None
+    value = re.sub(r'0[xX][0-9a-fA-F]+', '<address>', value)
+    value = re.sub(r'(?<![A-Za-z0-9_])(?:~?/|[A-Za-z]:\\)[^\s\'\"<>]+', '<path>', value)
+    return value[:500]
+
+
 def snapshot(debugger):
+    print('TRANSPORT_DEBUGGER_STAGE=snapshot_started', flush=True)
     process = debugger.GetSelectedTarget().GetProcess()
-    result = {'state': process.GetState(), 'exit_status': process.GetExitStatus(), 'threads': []}
-    for thread in process:
-        if thread.GetStopReason() in (lldb.eStopReasonSignal, lldb.eStopReasonException):
-            frames = []
-            for index in range(30):
-                frame = thread.GetFrameAtIndex(index)
-                if not frame.IsValid(): break
-                frames.append({'module': frame.GetModule().GetFileSpec().GetFilename(), 'function': frame.GetFunctionName()})
-            result['threads'].append({
-                'reason': thread.GetStopReason(),
-                'functions': frames,
-            })
-    Path(os.environ['PROBE_SUMMARY']).write_text(json.dumps(result, indent=2))
+    result = {'stage': 'process_state', 'state': process.GetState(),
+              'exit_status': process.GetExitStatus(), 'threads': []}
+    destination = Path(os.environ['PROBE_SUMMARY'])
+
+    def save():
+        destination.write_text(json.dumps(result, indent=2))
+
+    save()
+    for index in range(min(process.GetNumThreads(), 32)):
+        thread = process.GetThreadAtIndex(index)
+        reason = thread.GetStopReason()
+        if reason in (lldb.eStopReasonSignal, lldb.eStopReasonException):
+            stopped = {'reason': reason, 'functions': []}
+            if reason == lldb.eStopReasonSignal and thread.GetStopReasonDataCount():
+                stopped['signal'] = thread.GetStopReasonDataAtIndex(0)
+            result['threads'].append(stopped)
+            result['stage'] = 'unwinding'
+            save()
+            for frame_index in range(30):
+                frame = thread.GetFrameAtIndex(frame_index)
+                if not frame.IsValid():
+                    break
+                stopped['functions'].append({
+                    'module': safe_symbol(frame.GetModule().GetFileSpec().GetFilename()),
+                    'function': safe_symbol(frame.GetFunctionName()),
+                })
+                save()
+    result['stage'] = 'complete'
+    save()
+    print('TRANSPORT_DEBUGGER_STAGE=snapshot_finished', flush=True)
