@@ -1,0 +1,19 @@
+{
+  "platform": "Darwin",
+  "architecture": "x86_64",
+  "metric": "process to first painted frame; OS caches are not cleared",
+  "java": {
+    "seconds": [
+      3.18,
+      1.38,
+      1.998,
+      1.905,
+      1.907
+    ],
+    "median_seconds": 1.907
+  },
+  "flutter": {
+    "error": "Measurement exited with code 1",
+    "stderr_log": "startup-diagnostics/flutter.stderr.log"
+  }
+}
