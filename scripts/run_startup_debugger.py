@@ -177,13 +177,6 @@ def core_main():
                             result['ready'] = True
                             break
                         time.sleep(0.01)
-                    # Kernel core writing may delay process reaping. This grants
-                    # only the already-owned core a brief bounded completion wait.
-                    if not result['ready'] and core_owned and core.exists() and process.poll() is None:
-                        try:
-                            process.wait(timeout=15)
-                        except subprocess.TimeoutExpired:
-                            result['constraint'] = 'core_write_did_not_complete_in_budget'
                     result['app_exit_status'] = process.poll()
                     result['frame_marker'] = marker.exists()
                     result['ready_marker'] = ready.exists()
@@ -193,6 +186,22 @@ def core_main():
                     print(result, flush=True)
                     if result['ready']:
                         continue
+                    if core_owned and process.poll() is None:
+                        # The native startup failure above is already persisted.
+                        # Abort only this still-alive child AFTER the deadline so
+                        # the OS can preserve its failed state without debugging
+                        # or otherwise changing startup timing.
+                        result['capture_signal'] = 'SIGABRT_after_failed_startup'
+                        save()
+                        try:
+                            process.send_signal(signal.SIGABRT)
+                            process.wait(timeout=10)
+                        except ProcessLookupError:
+                            pass
+                        except subprocess.TimeoutExpired:
+                            result['constraint'] = 'aborted_process_did_not_exit_in_capture_budget'
+                        result['capture_exit_status'] = process.poll()
+                        save()
                     if not core_owned:
                         result['constraint'] = 'core_ownership_not_established'
                     elif process.poll() is None:

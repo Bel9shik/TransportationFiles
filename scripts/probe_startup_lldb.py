@@ -25,8 +25,18 @@ def snapshot(debugger):
         destination.write_text(json.dumps(result, indent=2))
 
     save()
-    for index in range(min(process.GetNumThreads(), 32)):
+    # Include the selected/crashing thread first, then cap the complete
+    # snapshot at sixteen threads and thirty public function names per thread.
+    selected = process.GetSelectedThread()
+    threads = [selected] if selected.IsValid() else []
+    for index in range(process.GetNumThreads()):
         thread = process.GetThreadAtIndex(index)
+        if selected.IsValid() and thread.GetThreadID() == selected.GetThreadID():
+            continue
+        if len(threads) >= 16:
+            break
+        threads.append(thread)
+    for thread in threads:
         reason = thread.GetStopReason()
         if os.environ.get('PROBE_CORE_CAPTURE') == '1' or reason in (lldb.eStopReasonSignal, lldb.eStopReasonException):
             stopped = {'reason': reason, 'functions': []}
