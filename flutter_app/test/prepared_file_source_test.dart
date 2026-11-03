@@ -132,6 +132,33 @@ void main() {
     expect(parts.last.bytes, sha256.convert([42]).bytes);
   });
 
+  test('close during a pending first moveNext terminates cleanly', () async {
+    final file = await File(p.join(root.path, 'data'))
+        .writeAsBytes(Uint8List(4 * blockSize));
+    final warmup = await File(p.join(root.path, 'warmup')).writeAsBytes([42]);
+    // Exercise both startup and reused-worker open/read races. The worker's
+    // reply and exit notifications travel on separate ports and may race.
+    for (var attempt = 0; attempt < 20; attempt++) {
+      final worker = PreparedFileSource();
+      StreamIterator<PreparedFilePart>? reader;
+      try {
+        if (attempt.isOdd) await worker.readFile(warmup, 1).drain<void>();
+        reader = StreamIterator(worker.readFile(file, 4 * blockSize));
+        final pending = reader.moveNext();
+        // Let the generator enter its asynchronous open/read before closing.
+        await Future<void>.delayed(Duration.zero);
+        final closing = worker.close();
+        await pending;
+        await closing;
+        expect(await reader.moveNext(), isFalse);
+      } finally {
+        await reader?.cancel();
+        await worker.close();
+      }
+    }
+    await file.delete();
+  });
+
   test(
     'close awaits pending read and worker exit even with a paused consumer',
     () async {

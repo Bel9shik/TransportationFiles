@@ -487,7 +487,9 @@ class TransferSender {
     var completed = 0;
     for (var i = 0; i < files.length; i++) {
       final preparedSource = _preparedSource;
-      if (preparedSource != null) {
+      // A single block cannot overlap preparation with sending; avoid worker
+      // round trips for small files (and for empty files).
+      if (preparedSource != null && sizes[i] > 1024 * 1024) {
         var count = 0;
         await for (final prepared in preparedSource.readFile(
           files[i].file,

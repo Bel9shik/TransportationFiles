@@ -49,6 +49,11 @@ class PreparedFileSource {
         pending.ignore();
         yield part;
       }
+    } catch (_) {
+      // A normal close may deliver the worker's exit notification before an
+      // already queued open/read reply. Treat that as cancellation only when
+      // this source was closed; operational read/hash errors still propagate.
+      if (!_closed) rethrow;
     } finally {
       if (pending != null) {
         await pending.then<void>((_) {}, onError: (Object _, StackTrace _) {});

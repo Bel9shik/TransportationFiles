@@ -40,7 +40,6 @@ Future<void> main(List<String> args) async {
         stdout.writeln(timer.elapsedMicroseconds / 1e6);
       }
     } finally {
-      stderr.writeln('Sender peak RSS: ${ProcessInfo.maxRss}');
       await sender.close();
     }
   } else {
