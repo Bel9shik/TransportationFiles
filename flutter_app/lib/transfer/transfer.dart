@@ -12,6 +12,7 @@ import 'files.dart';
 import 'publish.dart';
 import 'bounded_grpc.dart';
 import 'streaming_digest.dart';
+import 'upload_flow.dart';
 
 class OfferedFile {
   final String name;
@@ -202,10 +203,7 @@ class TransferNode {
       final bytes = buffered.takeBytes();
       // Hash the same immutable buffer while the asynchronous disk write is
       // pending. Await both before reusing state or acknowledging the file.
-      await Future.wait<void>([
-        output!.writeFrom(bytes),
-        hash.add(bytes),
-      ]);
+      await Future.wait<void>([output!.writeFrom(bytes), hash.add(bytes)]);
     }
 
     final iterator = StreamIterator(chunks);
@@ -357,11 +355,14 @@ String errorText(Object error) => switch (error) {
 
 class TransferSender {
   final Endpoint endpoint;
+  late final BoundedConnector _connector;
   late final ClientTransportConnectorChannel _channel;
   bool _cancelled = false;
+  bool _sending = false;
   TransferSender(this.endpoint) {
+    _connector = BoundedConnector(endpoint.host, endpoint.port);
     _channel = ClientTransportConnectorChannel(
-      BoundedConnector(endpoint.host, endpoint.port),
+      _connector,
       options: const ChannelOptions(
         credentials: ChannelCredentials.insecure(),
         connectionTimeout: Duration(seconds: 10),
@@ -370,10 +371,28 @@ class TransferSender {
   }
   Future<void> close() async {
     _cancelled = true;
+    _connector.abortUpload();
     await _channel.terminate();
   }
 
   Future<void> send(
+    List<SourceFile> selection,
+    String sender,
+    void Function() accepted,
+    Progress progress,
+  ) async {
+    if (_sending) {
+      throw StateError('Отправка уже выполняется');
+    }
+    _sending = true;
+    try {
+      await _send(selection, sender, accepted, progress);
+    } finally {
+      _sending = false;
+    }
+  }
+
+  Future<void> _send(
     List<SourceFile> selection,
     String sender,
     void Function() accepted,
@@ -421,12 +440,24 @@ class TransferSender {
         throw const FormatException('Обновите приложение у получателя');
       }
       accepted();
-      final status = await wire.FileTransferServiceClient(_channel).sendFile(
-        _chunks(files, sizes, total, approval.transferToken, progress),
-        options: CallOptions(timeout: const Duration(minutes: 10)),
-      );
-      if (!status.success) throw FormatException(status.message);
-      progress(total, total);
+      final upload = _connector.beginUpload();
+      try {
+        final status = await wire.FileTransferServiceClient(_channel).sendFile(
+          _chunks(
+            files,
+            sizes,
+            total,
+            approval.transferToken,
+            progress,
+            upload,
+          ),
+          options: CallOptions(timeout: const Duration(minutes: 10)),
+        );
+        if (!status.success) throw FormatException(status.message);
+        progress(total, total);
+      } finally {
+        _connector.endUpload(upload);
+      }
     } on GrpcError catch (e) {
       if (e.code == StatusCode.unavailable) {
         throw FormatException(
@@ -443,6 +474,7 @@ class TransferSender {
     int total,
     String token,
     Progress progress,
+    UploadFlow upload,
   ) async* {
     var completed = 0;
     for (var i = 0; i < files.length; i++) {
@@ -461,6 +493,7 @@ class TransferSender {
           }
           await hash.add(bytes);
           for (var offset = 0; offset < bytes.length; offset += 64 * 1024) {
+            if (_cancelled || !await upload.reserve()) return;
             if (_cancelled) return;
             final part = Uint8List.sublistView(
               bytes,
@@ -480,6 +513,8 @@ class TransferSender {
           throw const FormatException('Размер исходного файла изменился');
         }
         final digest = await hash.finish();
+        if (_cancelled || !await upload.reserve()) return;
+        if (_cancelled) return;
         yield wire.FileChunk(
           filename: files[i].name,
           transferToken: token,
