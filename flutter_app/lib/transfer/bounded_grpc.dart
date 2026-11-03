@@ -7,6 +7,7 @@ import 'package:grpc/grpc.dart';
 import 'package:http2/transport.dart' as h2;
 
 import 'http2_window_updates.dart';
+import 'upload_flow.dart';
 
 // grpc-dart 5.2 allocates the declared message length before deserializing it.
 // Validate the five-byte envelope before forwarding it to that decoder, on
@@ -81,7 +82,8 @@ class _ServerConnection extends _Connection
 
 class _ClientConnection extends _Connection
     implements h2.ClientTransportConnection {
-  _ClientConnection(h2.ClientTransportConnection super.inner);
+  final UploadFlow? Function() uploadFlow;
+  _ClientConnection(h2.ClientTransportConnection super.inner, this.uploadFlow);
   @override
   bool get isOpen => (inner as h2.ClientTransportConnection).isOpen;
   @override
@@ -91,12 +93,23 @@ class _ClientConnection extends _Connection
   h2.ClientTransportStream makeRequest(
     List<h2.Header> headers, {
     bool endStream = false,
-  }) => _ClientStream(
-    (inner as h2.ClientTransportConnection).makeRequest(
-      headers,
-      endStream: endStream,
-    ),
-  );
+  }) {
+    final upload =
+        headers.any(
+          (header) =>
+              String.fromCharCodes(header.name) == ':path' &&
+              String.fromCharCodes(header.value) == '/kardash.project.proto.transport.FileTransferService/sendFile',
+        )
+        ? uploadFlow()
+        : null;
+    return _ClientStream(
+      (inner as h2.ClientTransportConnection).makeRequest(
+        headers,
+        endStream: endStream,
+      ),
+      upload,
+    );
+  }
 }
 
 abstract class _Stream extends h2.TransportStream {
@@ -128,7 +141,38 @@ class _ServerStream extends _Stream implements h2.ServerTransportStream {
 }
 
 class _ClientStream extends _Stream implements h2.ClientTransportStream {
-  _ClientStream(h2.ClientTransportStream super.inner);
+  final UploadSink? _upload;
+  _ClientStream(h2.ClientTransportStream inner, UploadFlow? flow)
+    : _upload = flow == null ? null : UploadSink(inner.outgoingMessages, flow),
+      super(inner) {
+    inner.onTerminated = (_) => _upload?.abort();
+  }
+  @override
+  Stream<h2.StreamMessage> get incomingMessages async* {
+    try {
+      yield* super.incomingMessages;
+    } finally {
+      _upload?.abort();
+    }
+  }
+
+  @override
+  StreamSink<h2.StreamMessage> get outgoingMessages =>
+      _upload ?? super.outgoingMessages;
+  @override
+  set onTerminated(void Function(int?) value) {
+    inner.onTerminated = (code) {
+      _upload?.abort();
+      value(code);
+    };
+  }
+
+  @override
+  void terminate() {
+    _upload?.abort();
+    super.terminate();
+  }
+
   @override
   Stream<h2.TransportStreamPush> get peerPushes =>
       (inner as h2.ClientTransportStream).peerPushes;
@@ -193,9 +237,30 @@ class BoundedConnector implements ClientTransportConnector {
   final int port;
   Socket? _socket;
   var _generation = 0;
+  UploadFlow? _upload;
+  UploadFlow? _connectedUpload;
   BoundedConnector(this.host, this.port);
+
+  UploadFlow beginUpload() {
+    if (_upload != null) throw StateError('An upload is already active');
+    return _upload = UploadFlow();
+  }
+
+  void endUpload(UploadFlow flow) {
+    flow.abort();
+    if (identical(_upload, flow)) _upload = null;
+    if (identical(_connectedUpload, flow)) _connectedUpload = null;
+  }
+
+  void abortUpload() {
+    _upload?.abort();
+    _connectedUpload?.abort();
+  }
+
   @override
   Future<h2.ClientTransportConnection> connect() async {
+    _connectedUpload?.abort();
+    _connectedUpload = null;
     final generation = ++_generation;
     final socket = await Socket.connect(
       host,
@@ -218,6 +283,7 @@ class BoundedConnector implements ClientTransportConnector {
           maxFrameSize: 128 * 1024,
         ),
       ),
+      () => _connectedUpload = _upload,
     );
   }
 
@@ -226,6 +292,7 @@ class BoundedConnector implements ClientTransportConnector {
   @override
   void shutdown() {
     _generation++;
+    abortUpload();
     _socket?.destroy();
   }
 

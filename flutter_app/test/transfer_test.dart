@@ -132,6 +132,39 @@ void main() {
     expect(await files[0].readAsString(), 'one');
     expect(await files[1].length(), 0);
   });
+  test('sender rejects overlap and can send again after completion', () async {
+    final source = await File(p.join(root.path, 'source')).writeAsString('one');
+    final client = TransferSender(Endpoint('127.0.0.1', node.port));
+    try {
+      final first = client.send(
+        [SourceFile(source, 'first.txt')],
+        'Sender',
+        () {},
+        (_, _) {},
+      );
+      await expectLater(
+        client.send(
+          [SourceFile(source, 'overlap.txt')],
+          'Sender',
+          () {},
+          (_, _) {},
+        ),
+        throwsA(isA<StateError>()),
+      );
+      await first;
+      expect(await File(target).readAsString(), 'one');
+      target = p.join(root.path, 'second');
+      await client.send(
+        [SourceFile(source, 'second.txt')],
+        'Sender',
+        () {},
+        (_, _) {},
+      );
+      expect(await File(target).readAsString(), 'one');
+    } finally {
+      await client.close();
+    }
+  });
   test('sender cancellation closes the source and leaves no received file', () async {
     final source = await File(p.join(root.path, 'source'))
         .writeAsBytes(List<int>.filled(9 * 1024 * 1024, 42));

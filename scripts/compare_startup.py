@@ -37,7 +37,8 @@ for name, path in zip(('java', 'flutter'), paths):
         with output_path.open('w') as output, error_path.open('w') as errors:
             completed = subprocess.run(
                 [sys.executable, str(root / 'scripts/measure_startup.py'),
-                 str(root / path), '--runs', '5', '--max-seconds', '15']
+                 str(root / path), '--runs', '5', '--max-seconds', '15',
+                 '--diagnostics-dir', str(diagnostics / name)]
                 + (['--require-ready'] if name == 'flutter' else []),
                 stdout=output, stderr=errors, text=True, timeout=120,
             )
