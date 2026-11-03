@@ -1,0 +1,61 @@
+name: Windows AOT CPU profile
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/windows-throughput-probe]
+    paths: [.github/workflows/profile-windows.yml]
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '4'
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: ilammy/setup-nasm@v1
+      - name: Pin unchanged production source and transfer verifier
+        shell: bash
+        run: |
+          git fetch origin c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85
+          git restore --source=c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85 -- flutter_app/lib core proto scripts/benchmark_transfer.py
+      - working-directory: flutter_app
+        run: flutter pub get --enforce-lockfile
+      - name: Build Java reference and native-assets AOT profiler wrapper
+        shell: bash
+        run: |
+          ./gradlew :core:prepareTransferBenchmark
+          cd flutter_app
+          dart analyze tool/profile_benchmark.dart
+          dart build cli --target=tool/profile_benchmark.dart --output=build/profile-benchmark
+      - name: Verify transfers while sampling Dart sender CPU
+        shell: pwsh
+        run: |
+          $env:TRANSPORT_CPU_PROFILE_DIR = Join-Path $env:RUNNER_TEMP 'transport-cpu-raw'
+          python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/profile-benchmark/bundle/bin/profile_benchmark.exe --output profile-verification.json --warmups 3 --runs 15 --cross
+      - name: Aggregate locally with pinned official offline Perfetto parser
+        shell: pwsh
+        run: |
+          python -m venv "$env:RUNNER_TEMP/transport-profile-tools"
+          $profilePython = "$env:RUNNER_TEMP/transport-profile-tools/Scripts/python.exe"
+          & $profilePython -m pip install perfetto==0.59.1
+          & $profilePython scripts/profile_summary.py --traces "$env:RUNNER_TEMP/transport-cpu-raw" --verification profile-verification.json --output profile-summary.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload safe aggregate only
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-aot-cpu-summary
+          path: profile-summary.json
+          if-no-files-found: error
