@@ -1,35 +1,57 @@
-name: macOS Intel untraced startup core probe
+name: Windows throughput probe
 on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 jobs:
-  startup:
-    runs-on: macos-15-intel
-    timeout-minutes: 5
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: '4'
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
-      - name: Download previously validated Intel package
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh run download 41418535620 -n TransportationFiles-Native-macOS-X64 -D probe-artifact
-      - name: Prepare core directory only on disposable macOS GitHub runner
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: ilammy/setup-nasm@v1
+      - working-directory: flutter_app
+        run: flutter pub get --enforce-lockfile
+      - name: Candidate analysis and tests
+        working-directory: flutter_app
         run: |
-          test "$GITHUB_ACTIONS" = true
-          test "$RUNNER_OS" = macOS
-          sudo install -d -m 1777 /cores
-      - name: Capture own ephemeral app crash as safe offline function summaries
-        timeout-minutes: 4
+          flutter analyze
+          flutter test
+      - name: Build Java baseline
+        shell: bash
+        run: ./gradlew :core:prepareTransferBenchmark
+      - name: Build before and after AOT bundles
+        shell: bash
         run: |
-          mkdir probe-package
-          tar -xzf probe-artifact/TransportationFiles-macOS-X64.tar.gz -C probe-package
-          export PROBE_EXECUTABLE="$PWD/probe-package/TransportationFiles.app/Contents/MacOS/TransportationFiles"
-          python3 scripts/run_startup_debugger.py --core
+          git fetch origin 514b144825bfd9758bda30a12f7c28429d71d8ab
+          git show 514b144825bfd9758bda30a12f7c28429d71d8ab:flutter_app/lib/transfer/transfer.dart > flutter_app/lib/transfer/transfer.dart
+          cd flutter_app
+          dart build cli --target=tool/benchmark.dart --output=build/before
+          git restore lib/transfer/transfer.dart
+          dart build cli --target=tool/benchmark.dart --output=build/prepared
+      - name: Compare unchanged control before and after candidate
+        shell: bash
+        run: |
+          for variant in before prepared before; do
+            stamp=$(date +%s)
+            flutter_app/build/$variant/bundle/bin/benchmark.exe components
+            python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/$variant/bundle/bin/benchmark.exe --output transfer-$variant-$stamp.json --warmups 3 --runs 9 --cross
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: macos-intel-startup-core-summary
-          path: |
-            startup-diagnostics/core-runs.json
-            startup-diagnostics/offline-core.json
+          name: windows-throughput-probe
+          path: transfer-*.json

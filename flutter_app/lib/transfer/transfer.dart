@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import '../generated/transport_files.pbgrpc.dart' as wire;
 import 'files.dart';
 import 'publish.dart';
+import 'prepared_file_source.dart';
 import 'bounded_grpc.dart';
 import 'streaming_digest.dart';
 import 'upload_flow.dart';
@@ -359,6 +360,9 @@ class TransferSender {
   late final ClientTransportConnectorChannel _channel;
   bool _cancelled = false;
   bool _sending = false;
+  final PreparedFileSource? _preparedSource = Platform.isWindows
+      ? PreparedFileSource()
+      : null;
   TransferSender(this.endpoint) {
     _connector = BoundedConnector(endpoint.host, endpoint.port);
     _channel = ClientTransportConnectorChannel(
@@ -372,7 +376,11 @@ class TransferSender {
   Future<void> close() async {
     _cancelled = true;
     _connector.abortUpload();
-    await _channel.terminate();
+    try {
+      await _preparedSource?.close();
+    } finally {
+      await _channel.terminate();
+    }
   }
 
   Future<void> send(
@@ -478,6 +486,47 @@ class TransferSender {
   ) async* {
     var completed = 0;
     for (var i = 0; i < files.length; i++) {
+      final preparedSource = _preparedSource;
+      if (preparedSource != null) {
+        var count = 0;
+        await for (final prepared in preparedSource.readFile(
+          files[i].file,
+          sizes[i],
+        )) {
+          if (_cancelled) return;
+          if (prepared.isDigest) {
+            if (!await upload.reserve() || _cancelled) return;
+            yield wire.FileChunk(
+              filename: files[i].name,
+              transferToken: token,
+              sha256: prepared.bytes,
+            );
+          } else {
+            for (
+              var offset = 0;
+              offset < prepared.bytes.length;
+              offset += 64 * 1024
+            ) {
+              if (_cancelled || !await upload.reserve()) return;
+              if (_cancelled) return;
+              final part = Uint8List.sublistView(
+                prepared.bytes,
+                offset,
+                min(offset + 64 * 1024, prepared.bytes.length),
+              );
+              count += part.length;
+              yield wire.FileChunk(
+                filename: files[i].name,
+                transferToken: token,
+                content: part,
+              );
+              progress(completed + count, total);
+            }
+          }
+        }
+        completed += count;
+        continue;
+      }
       final input = await files[i].file.open();
       final hash = StreamingDigest();
       var count = 0;
