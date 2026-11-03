@@ -1,0 +1,71 @@
+name: Package authorized macOS Intel preview
+
+on:
+  push:
+    branches: [codex/package-intel-preview]
+    paths: [.github/workflows/package-intel-preview.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: macos-15-intel
+    timeout-minutes: 35
+    env:
+      FLUTTER_XCODE_ARCHS: x86_64
+      CMAKE_BUILD_PARALLEL_LEVEL: '4'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 7e288a3025cc8f93a503e5fa677c7f0f15c39566
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Resolve locked dependencies
+        working-directory: flutter_app
+        run: flutter pub get --enforce-lockfile
+      - name: Build native release
+        working-directory: flutter_app
+        run: flutter build macos --release
+      - name: Verify package architecture
+        shell: bash
+        run: |
+          actual=$(lipo -archs flutter_app/build/macos/Build/Products/Release/TransportationFiles.app/Contents/MacOS/TransportationFiles)
+          test "$actual" = "$FLUTTER_XCODE_ARCHS"
+      # The approved preview retains the known intermittent Intel startup failure.
+      - name: Package exact release source before startup verification
+        id: package
+        shell: bash
+        run: tar -czf TransportationFiles-macOS-X64.tar.gz -C flutter_app/build/macos/Build/Products/Release TransportationFiles.app
+      - name: Verify packaged startup
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          mkdir -p startup-diagnostics
+          python scripts/measure_startup.py \
+            flutter_app/build/macos/Build/Products/Release/TransportationFiles.app/Contents/MacOS/TransportationFiles \
+            --runs 5 --max-seconds 15 --require-ready \
+            --diagnostics-dir startup-diagnostics/live \
+            > startup-diagnostics/startup.stdout.log \
+            2> startup-diagnostics/startup.stderr.log
+      - name: Upload authorized preview archive
+        if: ${{ !cancelled() && steps.package.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TransportationFiles-Native-macOS-X64
+          path: TransportationFiles-macOS-X64.tar.gz
+          if-no-files-found: error
+      - name: Upload startup status on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: intel-preview-startup-status
+          path: |
+            startup-diagnostics/startup.stdout.log
+            startup-diagnostics/startup.stderr.log
+          if-no-files-found: warn
