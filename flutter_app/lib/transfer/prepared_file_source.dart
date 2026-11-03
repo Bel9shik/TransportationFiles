@@ -215,6 +215,7 @@ Future<void> _readFiles(SendPort responses) async {
   RandomAccessFile? input;
   StreamingDigest? hash;
   var count = 0, expected = 0;
+  final readBuffer = Uint8List(1024 * 1024);
 
   Future<void> closeFile() async {
     try {
@@ -242,7 +243,8 @@ Future<void> _readFiles(SendPort responses) async {
             }
             hash = StreamingDigest();
           case 'read':
-            final bytes = input!.readSync(1024 * 1024);
+            final length = input!.readIntoSync(readBuffer);
+            final bytes = Uint8List.sublistView(readBuffer, 0, length);
             if (bytes.isEmpty) {
               if (count != expected) {
                 throw const FormatException('Размер исходного файла изменился');
@@ -256,6 +258,8 @@ Future<void> _readFiles(SendPort responses) async {
               }
               await hash!.add(bytes);
               count += bytes.length;
+              // Hashing has consumed this view; _PartReply copies it into
+              // transferable storage before the next read reuses the buffer.
               result = _PartReply(bytes, isDigest: false);
             }
           case 'cancel':

@@ -25,7 +25,7 @@ jobs:
       - uses: ilammy/setup-nasm@v1
       - working-directory: flutter_app
         run: flutter pub get --enforce-lockfile
-      - name: Current control analysis and full tests
+      - name: Reusable-read candidate analysis and full tests
         working-directory: flutter_app
         run: |
           flutter analyze
@@ -47,48 +47,28 @@ jobs:
       - name: Build Java baseline
         shell: bash
         run: ./gradlew :core:prepareTransferBenchmark
-      - name: Build five AOT variants from pinned current control
+      - name: Build pinned control and reusable-read AOT variants
         shell: bash
         run: |
           git fetch origin c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85
-          for variant in before windows_window windows_socket windows_both sync_upload; do
-            git show c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85:flutter_app/lib/transfer/bounded_grpc.dart > flutter_app/lib/transfer/bounded_grpc.dart
-            git show c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85:flutter_app/lib/transfer/http2_window_updates.dart > flutter_app/lib/transfer/http2_window_updates.dart
-            git show c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85:flutter_app/lib/transfer/upload_flow.dart > flutter_app/lib/transfer/upload_flow.dart
-            PROBE_VARIANT="$variant" python - <<'PYTHON'
-          import os
+          git show c8ad2501cf398b83aa389e8a1b5fa24f4af1cd85:flutter_app/lib/transfer/prepared_file_source.dart > flutter_app/lib/transfer/prepared_file_source.dart
+          (cd flutter_app && dart build cli --target=tool/benchmark.dart --output=build/before)
+          git restore flutter_app/lib/transfer/prepared_file_source.dart
+          (cd flutter_app && dart build cli --target=tool/benchmark.dart --output=build/reusable)
+          python - <<'PYTHON'
           from pathlib import Path
-          variant = os.environ['PROBE_VARIANT']
-          if variant in ('windows_window', 'windows_both'):
-              p = Path('flutter_app/lib/transfer/bounded_grpc.dart')
-              s = p.read_text()
-              assert s.count('streamWindowSize: 1024 * 1024,') == 2
-              assert s.count('connectionWindowSize: 4 * 1024 * 1024,') == 2
-              s = s.replace('settings: const h2.ServerSettings(', 'settings: h2.ServerSettings(')
-              s = s.replace('settings: const h2.ClientSettings(', 'settings: h2.ClientSettings(')
-              s = s.replace('streamWindowSize: 1024 * 1024,', 'streamWindowSize: Platform.isWindows ? 4 * 1024 * 1024 : 1024 * 1024,')
-              s = s.replace('connectionWindowSize: 4 * 1024 * 1024,', 'connectionWindowSize: Platform.isWindows ? 16 * 1024 * 1024 : 4 * 1024 * 1024,')
-              p.write_text(s)
-          if variant in ('windows_socket', 'windows_both'):
-              p = Path('flutter_app/lib/transfer/http2_window_updates.dart')
-              s = p.read_text()
-              before = '(batchEventTurn ? 1024 * 1024 : 64 * 1024)'
-              assert s.count(before) == 1
-              p.write_text(s.replace(before, '(batchEventTurn ? 256 * 1024 : 64 * 1024)'))
-          if variant == 'sync_upload':
-              p = Path('flutter_app/lib/transfer/upload_flow.dart')
-              s = p.read_text()
-              before = 'final _controller = StreamController<h2.StreamMessage>();'
-              assert s.count(before) == 1
-              p.write_text(s.replace(before, 'final _controller = StreamController<h2.StreamMessage>(sync: true);'))
+          p = Path('flutter_app/lib/transfer/upload_flow.dart')
+          s = p.read_text()
+          before = 'final _controller = StreamController<h2.StreamMessage>();'
+          assert s.count(before) == 1
+          p.write_text(s.replace(before, 'final _controller = StreamController<h2.StreamMessage>(sync: true);'))
           PYTHON
-            (cd flutter_app && dart build cli --target=tool/benchmark.dart --output=build/$variant)
-          done
-          git restore flutter_app/lib/transfer/bounded_grpc.dart flutter_app/lib/transfer/http2_window_updates.dart flutter_app/lib/transfer/upload_flow.dart
-      - name: Compare unchanged controls around four isolated candidates
+          (cd flutter_app && dart build cli --target=tool/benchmark.dart --output=build/reusable_sync)
+          git restore flutter_app/lib/transfer/upload_flow.dart
+      - name: Compare unchanged controls around reusable-read candidates
         shell: bash
         run: |
-          for variant in before windows_window windows_socket windows_both sync_upload before; do
+          for variant in before reusable reusable_sync before; do
             stamp=$(date +%s)
             python scripts/benchmark_transfer.py --classpath core/build/benchmark-classpath.txt --dart-aot flutter_app/build/$variant/bundle/bin/benchmark.exe --output transfer-$variant-$stamp.json --warmups 3 --runs 9 --cross
           done
